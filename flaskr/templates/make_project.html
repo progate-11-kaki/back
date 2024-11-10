@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>make project</title>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            {% if current_user.is_authenticated %}
+                <li><a href="./profile">profile</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    <div>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul>
+                    {% for message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <h2>make project</h2>
+        <p>ここはプロジェクト新規作成ページ🥸</p>
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <p>
+                {{ form.project_name.label }}<br>
+                {{ form.project_name(size=32) }}<br><br>
+                
+                {{ form.project_description.label }}<br>
+                {{ form.project_description(rows=4, cols=50) }}<br><br>
+                
+                {{ form.tags.label }}<br>
+                {{ form.tags(size=32) }}<br><br>
+                
+                {{ form.commit_message.label }}<br>
+                {{ form.commit_message(size=32) }}<br><br>
+                
+                {{ form.commit_image.label }}<br>
+                {{ form.commit_image() }}<br><br>
+                
+                {{ form.submit() }}
+            </p>
+        </form>
+    </div>
+</body>
+</html>

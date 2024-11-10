@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Home</title>
+</head>
+<body>
+    <nav>
+        <ul>
+            {% if current_user.is_authenticated %}
+                <img src="{{ url_for('uploads', filename=current_user.get_profile_image()) }}" alt="User Profile Image" width="50" height="50">
+                <li><a href="./profile">profile</a></li>
+                <li><a href="./makeproject">make project</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    <div>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul>
+                    {% for message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <h2>Home</h2>
+        <p>ここはホームページ🥸</p>
+        <form method="GET" action="{{ url_for('home') }}">
+            <input type="text" name="search" placeholder="検索..." value="{{ request.args.get('search', '') }}">
+            <button type="submit">検索</button>
+        </form>
+        
+        {% if projects %}
+            <h3>検索結果</h3>
+            <ul>
+                {% for project in projects %}
+                    <li><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.name }}</a></li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>関連するプロジェクトはありません。</p>
+        {% endif %}
+    </div>
+    <h3>Your Notifications</h3>
+    {% if notifications %}
+        <ul>
+            {% for notification in notifications %}
+                <li>
+                    {% if notification.commit_id %}
+                        <!-- コミットが作成された通知 -->
+                        {{ notification.message }}
+                        <a href="{{ url_for('commit_detail', project_id=notification.project_id, commit_id=notification.commit_id) }}">View Commit</a>
+                    {% elif notification.status == 'pending' %}
+                        <!-- プロジェクトへの招待通知 -->
+                        {{ notification.message }}
+                        <a href="{{ url_for('respond_to_invitation', notification_id=notification.id, response='accept') }}">Accept</a> |
+                        <a href="{{ url_for('respond_to_invitation', notification_id=notification.id, response='decline') }}">Decline</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>You have no pending notifications.</p>
+    {% endif %}
+</body>
+</html>

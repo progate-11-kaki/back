@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Commit to Project</title>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            {% if current_user.is_authenticated %}
+                <li><a href="{{ url_for('profile') }}">Profile</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('project_detail', project_id=project.id) }}">Back to Project</a></li>
+        </ul>
+    </nav>
+    
+    <div>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul>
+                    {% for message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <h2>Commit to Project: {{ project.name }}</h2>
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div>
+                <label for="commit_message">{{ form.commit_message.label }}</label><br>
+                {{ form.commit_message(size=64) }}<br><br>
+
+                <label for="commit_image">{{ form.commit_image.label }}</label><br>
+                {{ form.commit_image() }}<br><br>
+
+                <button type="submit">Submit Commit</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

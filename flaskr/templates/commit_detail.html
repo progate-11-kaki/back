@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Commit Details</title>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            {% if current_user.is_authenticated %}
+                <li><a href="{{ url_for('profile') }}">Profile</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('commits', project_id=project.id) }}">Back to Commits</a></li>
+        </ul>
+    </nav>
+    <div>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul>
+                    {% for message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <h2>Commit Detail</h2>
+        <img src="{{ url_for('uploads', filename=commit.commit_image.split('/')[-1]) }}" width="200">
+        <h2>{{ commit.commit_message }}</h2>
+        <p>作成日: {{ commit.date_posted }}</p>
+        <p>{{ commit.description }}</p>
+        
+        <h3>コメント</h3>
+        {% for comment in comments %}
+          <div>
+            <strong>{{ comment.user.username }}</strong>  <!-- コメントしたユーザー名 -->
+            <p>{{ comment.content }}</p>  <!-- コメント内容 -->
+            <small>投稿日: {{ comment.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small>  <!-- コメント投稿日 -->
+          </div>
+        {% else %}
+          <p>コメントはありません。</p>
+        {% endfor %}
+        
+        <h3>コメントを投稿</h3>
+        <form method="POST">
+          {{ form.hidden_tag() }}
+          <div>
+            {{ form.content.label }}<br>
+            {{ form.content(rows=4, cols=50) }}
+          </div>
+          <div>
+            {{ form.submit }}
+          </div>
+        </form>
+    </div>
+</body>
+</html>

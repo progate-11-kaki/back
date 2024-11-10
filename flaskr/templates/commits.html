@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ project.name }} - Commits</title>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            {% if current_user.is_authenticated %}
+                <li><a href="{{ url_for('profile') }}">Profile</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('project_detail', project_id=project.id) }}">Back to Project</a></li>
+        </ul>
+    </nav>
+    
+    <h1>Commits for Project: {{ project.name }}</h1>
+    
+    <ul>
+        {% for commit in commits %}
+        <li>
+            <a href="{{ url_for('commit_detail', project_id=project.id, commit_id=commit.id) }}">
+                <strong>{{ commit.commit_message }}</strong>
+            </a><br>
+            {% if commit.commit_image %}
+                <img src="{{ url_for('uploads', filename=commit.commit_image.split('/')[-1]) }}" width="100"><br>
+            {% endif %}
+            <small>By {{ commit.user.username }} on {{ commit.date_posted.strftime('%Y-%m-%d %H:%M') }}</small>
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
