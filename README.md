@@ -1,0 +1,2 @@
+default_profile.png
+デフォルトアイコンのパス
