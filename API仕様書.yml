@@ -1,43 +1,20 @@
 openapi: 3.0.0
 info:
-  title: Project Management API
-  description: This API allows users to manage projects, upload files, and handle user authentication.
+  title: Flask API for Project Management
+  description: API documentation for managing projects, commits, users, and notifications.
   version: 1.0.0
-
+  contact:
+    name: Your Name
+    email: your.email@example.com
 paths:
-  /uploads/{filename}:
-    get:
-      summary: Get uploaded file
-      description: Retrieves the uploaded file by its filename.
-      parameters:
-        - in: path
-          name: filename
-          required: true
-          schema:
-            type: string
-          description: The name of the file to retrieve.
-      responses:
-        '200':
-          description: File successfully retrieved
-        '404':
-          description: File not found
-
   /:
     get:
-      summary: Get notifications and public projects
-      description: Retrieves the notifications and public project search results for the logged-in user.
-      parameters:
-        - in: query
-          name: search
-          required: false
-          schema:
-            type: string
-          description: The search query for project names or descriptions.
-      security:
-        - BearerAuth: []
+      summary: Home
+      description: Fetches projects and notifications for the logged-in user.
+      operationId: home
       responses:
         '200':
-          description: List of projects and notifications
+          description: Successful retrieval of projects and notifications
           content:
             application/json:
               schema:
@@ -48,24 +25,26 @@ paths:
                     items:
                       type: object
                       properties:
-                        project_name:
+                        id:
+                          type: integer
+                        name:
                           type: string
-                        project_description:
+                        description:
                           type: string
                   notifications:
                     type: array
                     items:
                       type: object
                       properties:
-                        notification_id:
+                        id:
                           type: integer
                         message:
                           type: string
-
   /login:
     post:
-      summary: User login
-      description: Logs the user into the application.
+      summary: Login
+      description: Logs in a user with the provided credentials.
+      operationId: login
       requestBody:
         required: true
         content:
@@ -79,24 +58,43 @@ paths:
                   type: string
       responses:
         '200':
-          description: Login successful
-        '400':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
           description: Invalid credentials
-
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
   /logout:
     get:
-      summary: User logout
-      description: Logs the user out of the application.
-      security:
-        - BearerAuth: []
+      summary: Logout
+      description: Logs out the current user.
+      operationId: logout
       responses:
         '200':
-          description: Logout successful
-
+          description: Successful logout
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
   /register:
     post:
-      summary: Register a new user
-      description: Registers a new user in the application.
+      summary: User Registration
+      description: Registers a new user with username and password.
+      operationId: register
       requestBody:
         required: true
         content:
@@ -112,19 +110,31 @@ paths:
                   type: string
       responses:
         '200':
-          description: Registration successful
+          description: User registration successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
         '400':
-          description: Invalid input
-
+          description: Passwords do not match
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
   /profile:
     get:
-      summary: View user profile
-      description: Displays the user's profile information.
-      security:
-        - BearerAuth: []
+      summary: Get User Profile
+      description: Fetches the profile details of the logged-in user.
+      operationId: getProfile
       responses:
         '200':
-          description: User profile data
+          description: Successful retrieval of user profile
           content:
             application/json:
               schema:
@@ -132,18 +142,23 @@ paths:
                 properties:
                   username:
                     type: string
-                  profile_image:
-                    type: string
                   projects:
                     type: array
                     items:
-                      type: string
-
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        latest_commit:
+                          type: string
+                  profile_image:
+                    type: string
     post:
-      summary: Update user profile
-      description: Updates the user's profile information, including profile image.
-      security:
-        - BearerAuth: []
+      summary: Update Profile Image
+      description: Updates the profile image of the logged-in user.
+      operationId: updateProfileImage
       requestBody:
         required: true
         content:
@@ -156,14 +171,19 @@ paths:
                   format: binary
       responses:
         '200':
-          description: Profile updated successfully
-
+          description: Profile image updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
   /makeproject:
     post:
-      summary: Create a new project
-      description: Creates a new project in the system.
-      security:
-        - BearerAuth: []
+      summary: Create a Project
+      description: Creates a new project and adds a commit.
+      operationId: makeProject
       requestBody:
         required: true
         content:
@@ -179,11 +199,41 @@ paths:
                   type: string
                 commit_message:
                   type: string
-                commit_image:
-                  type: string
       responses:
         '200':
-          description: Project created successfully
+          description: Project and commit created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  project_id:
+                    type: integer
+        '400':
+          description: Missing image file
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /project/{project_id}:
+    get:
+      summary: Get Project Details
+      description: Fetches details of a specific project.
+      operationId: getProjectDetail
+      parameters:
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful retrieval of project details
           content:
             application/json:
               schema:
@@ -191,110 +241,97 @@ paths:
                 properties:
                   project_id:
                     type: integer
-                  message:
+                  name:
                     type: string
-
-  /project/{project_id}:
-    get:
-      summary: View project details
-      description: Displays detailed information about a project.
+                  description:
+                    type: string
+                  is_public:
+                    type: boolean
+                  latest_commit:
+                    type: string
+    patch:
+      summary: Toggle Project Visibility
+      description: Toggles the visibility of a project.
+      operationId: toggleProjectVisibility
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
-          description: The ID of the project to retrieve.
-      security:
-        - BearerAuth: []
       responses:
         '200':
-          description: Project details retrieved
+          description: Project visibility updated successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  project_name:
+                  message:
                     type: string
-                  project_description:
-                    type: string
-
-    patch:
-      summary: Update project visibility
-      description: Updates the visibility settings of a project.
-      parameters:
-        - in: path
-          name: project_id
-          required: true
-          schema:
-            type: integer
-          description: The ID of the project to update.
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                visibility:
-                  type: string
-                  enum: [public, private]
-      responses:
-        '200':
-          description: Project visibility updated successfully
-
     delete:
-      summary: Delete a project
-      description: Deletes a project from the system.
+      summary: Delete Project
+      description: Deletes a specific project.
+      operationId: deleteProject
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
-          description: The ID of the project to delete.
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Project deleted successfully
-
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
   /project/{project_id}/invite:
     get:
-      summary: Search and invite users to a project
-      description: Searches for users by the given search query and sends invites.
+      summary: Search Users for Project Invitation
+      description: Searches users to invite to the project.
+      operationId: searchUsersForInvite
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
-          description: The ID of the project to invite users to.
         - in: query
           name: search
-          required: true
+          required: false
           schema:
             type: string
-          description: The search query for finding users by name.
-      security:
-        - BearerAuth: []
       responses:
         '200':
-          description: User search results
-
+          description: Users found for invitation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        username:
+                          type: string
     post:
-      summary: Send project invite
-      description: Sends an invitation to a user to join the project.
+      summary: Invite User to Project
+      description: Sends an invitation to a user for the project.
+      operationId: inviteUserToProject
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
-          description: The ID of the project to send an invitation to.
       requestBody:
         required: true
         content:
@@ -304,23 +341,36 @@ paths:
               properties:
                 user_id:
                   type: integer
-      security:
-        - BearerAuth: []
       responses:
         '200':
-          description: Invitation sent successfully
-
+          description: User invited successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
   /project/{project_id}/commit:
     post:
-      summary: Add a new commit to a project
-      description: Adds a new commit message and image to the project.
+      summary: Add Commit to Project
+      description: Adds a commit to a project.
+      operationId: addCommitToProject
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
-          description: The ID of the project to commit to.
       requestBody:
         required: true
         content:
@@ -330,73 +380,67 @@ paths:
               properties:
                 commit_message:
                   type: string
-                commit_image:
-                  type: string
-      security:
-        - BearerAuth: []
       responses:
         '200':
           description: Commit added successfully
-
-  /project/{project_id}/commits:
-    get:
-      summary: Get commits for a project
-      description: Retrieves a list of commits associated with a project.
-      parameters:
-        - in: path
-          name: project_id
-          required: true
-          schema:
-            type: integer
-          description: The ID of the project to get commits for.
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: List of commits
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    commit_message:
-                      type: string
-                    commit_image:
-                      type: string
-
-  /notification/{notification_id}/respond/{response}:
-    patch:
-      summary: Respond to a notification
-      description: Respond to a notification (accept or decline an invite).
+                type: object
+                properties:
+                  message:
+                    type: string
+  /project/{project_id}/commits:
+    get:
+      summary: Get all commits for a project
+      description: Retrieve the list of commits for a specific project.
+      operationId: getProjectCommits
       parameters:
-        - in: path
-          name: notification_id
+        - name: project_id
+          in: path
           required: true
           schema:
             type: integer
-          description: The notification ID to respond to.
-        - in: path
-          name: response
+      responses:
+        200:
+          description: Successfully retrieved commits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  commits:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        message:
+                          type: string
+                        date_posted:
+                          type: string
+                          format: date-time
+                          
+  /notification/{notification_id}/respond/{response}:
+    patch:
+      summary: Respond to a notification
+      parameters:
+        - name: notification_id
+          in: path
+          description: The ID of the notification
           required: true
           schema:
             type: string
-            enum: [accept, decline]
-          description: The response to the invitation.
-      security:
-        - BearerAuth: []
+        - name: response
+          in: path
+          description: The response to the notification
+          required: true
+          schema:
+            type: string
       responses:
         '200':
-          description: Response successfully recorded
+          description: Successful response
         '400':
-          description: Invalid response
-
-components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-
+          description: Bad request
+       
