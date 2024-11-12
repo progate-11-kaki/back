@@ -1,20 +1,44 @@
 openapi: 3.0.0
 info:
-  title: Flask API for Project Management
-  description: API documentation for managing projects, commits, users, and notifications.
+  title: プロジェクト管理API
+  description: "このAPIは、プロジェクト作成、ユーザー招待、通知管理、コミット管理などの機能を提供します。"
   version: 1.0.0
-  contact:
-    name: Your Name
-    email: your.email@example.com
+
+servers:
+  - url: http://localhost:5000
+    description: ローカルサーバー
+
 paths:
+  /uploads/{filename}:
+    get:
+      summary: "アップロードしたファイルを取得"
+      description: "指定されたファイル名のファイルを取得します。"
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: "ファイルを取得しました。"
+        404:
+          description: "ファイルが見つかりません。"
+
   /:
     get:
-      summary: Home
-      description: Fetches projects and notifications for the logged-in user.
-      operationId: home
+      summary: ホーム画面データ取得
+      description: 認証済みユーザーがアクセス可能なホーム画面データを取得します。公開されているプロジェクトとユーザーの通知情報を含みます。
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 検索クエリ。プロジェクト名または説明で部分一致する文字列を検索します。
       responses:
-        '200':
-          description: Successful retrieval of projects and notifications
+        "200":
+          description: 成功時にプロジェクトリストと通知リストを返します
           content:
             application/json:
               schema:
@@ -27,10 +51,13 @@ paths:
                       properties:
                         id:
                           type: integer
+                          description: プロジェクトのID
                         name:
                           type: string
+                          description: プロジェクト名
                         description:
                           type: string
+                          description: プロジェクトの説明
                   notifications:
                     type: array
                     items:
@@ -38,15 +65,16 @@ paths:
                       properties:
                         id:
                           type: integer
+                          description: 通知のID
                         message:
                           type: string
+                          description: 通知メッセージ
+  
   /login:
     post:
-      summary: Login
-      description: Logs in a user with the provided credentials.
-      operationId: login
+      summary: "ログイン"
+      description: "ユーザーがログインします。"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -57,46 +85,24 @@ paths:
                 password:
                   type: string
       responses:
-        '200':
-          description: Successful login
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-        '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+        200:
+          description: "ログインに成功しました。"
+        401:
+          description: "ユーザー名またはパスワードが無効です。"
+
   /logout:
     get:
-      summary: Logout
-      description: Logs out the current user.
-      operationId: logout
+      summary: "ログアウト"
+      description: "ユーザーがログアウトします。"
       responses:
-        '200':
-          description: Successful logout
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+        200:
+          description: "ログアウトしました。"
+
   /register:
     post:
-      summary: User Registration
-      description: Registers a new user with username and password.
-      operationId: register
+      summary: "ユーザー登録"
+      description: "新しいユーザーを登録します。"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -109,56 +115,15 @@ paths:
                 password2:
                   type: string
       responses:
-        '200':
-          description: User registration successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-        '400':
-          description: Passwords do not match
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+        201:
+          description: "ユーザー登録が完了しました。"
+        400:
+          description: "パスワードが一致しません。"
+
   /profile:
-    get:
-      summary: Get User Profile
-      description: Fetches the profile details of the logged-in user.
-      operationId: getProfile
-      responses:
-        '200':
-          description: Successful retrieval of user profile
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  username:
-                    type: string
-                  projects:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        name:
-                          type: string
-                        latest_commit:
-                          type: string
-                  profile_image:
-                    type: string
     post:
-      summary: Update Profile Image
-      description: Updates the profile image of the logged-in user.
-      operationId: updateProfileImage
+      summary: プロフィール情報と画像の更新
+      description: 認証済みユーザーのプロフィール画像をアップロードし、プロジェクト情報を含むユーザーのプロフィール情報を取得します。
       requestBody:
         required: true
         content:
@@ -169,9 +134,10 @@ paths:
                 profile_image:
                   type: string
                   format: binary
+                  description: プロフィール画像のファイルアップロード
       responses:
-        '200':
-          description: Profile image updated successfully
+        "200":
+          description: 成功時にプロフィール情報を返します
           content:
             application/json:
               schema:
@@ -179,11 +145,32 @@ paths:
                 properties:
                   message:
                     type: string
+                    description: プロフィール画像が更新されたことを示すメッセージ
+                  username:
+                    type: string
+                    description: ユーザー名
+                  projects:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: プロジェクトのID
+                        name:
+                          type: string
+                          description: プロジェクト名
+                        latest_commit_image:
+                          type: string
+                          description: 最新コミットの画像ファイル名
+                  profile_image:
+                    type: string
+                    description: プロフィール画像のファイルパスまたはURL
+
   /makeproject:
     post:
-      summary: Create a Project
-      description: Creates a new project and adds a commit.
-      operationId: makeProject
+      summary: 新規プロジェクトの作成
+      description: ユーザーが新しいプロジェクトを作成し、最初のコミットを追加するエンドポイントです。プロジェクト名、説明、タグ、コミットメッセージ、およびコミット画像を提供します。
       requestBody:
         required: true
         content:
@@ -193,26 +180,33 @@ paths:
               properties:
                 project_name:
                   type: string
+                  description: プロジェクトの名前
                 project_description:
                   type: string
+                  description: プロジェクトの説明
                 tags:
                   type: string
+                  description: プロジェクトに関連するタグ（カンマ区切り）
                 commit_message:
                   type: string
+                  description: コミットメッセージ
+                commit_image:
+                  type: string
+                  format: binary
+                  description: 最初のコミットの画像ファイル
       responses:
-        '200':
-          description: Project and commit created successfully
+        "201":
+          description: 成功時に作成されたプロジェクトのIDを返します
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
                   project_id:
                     type: integer
-        '400':
-          description: Missing image file
+                    description: 作成されたプロジェクトのID
+        "400":
+          description: 画像がアップロードされていない場合のエラーメッセージ
           content:
             application/json:
               schema:
@@ -220,20 +214,22 @@ paths:
                 properties:
                   error:
                     type: string
+                    description: 画像ファイルがアップロードされていない場合のエラーメッセージ
+
   /project/{project_id}:
     get:
-      summary: Get Project Details
-      description: Fetches details of a specific project.
-      operationId: getProjectDetail
+      summary: プロジェクトの詳細情報の取得
+      description: 指定したプロジェクトの詳細情報（名前、説明、公開状態、最新のコミット画像）を取得するエンドポイントです。
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
+          description: プロジェクトのID
       responses:
-        '200':
-          description: Successful retrieval of project details
+        "200":
+          description: プロジェクトの詳細情報が正常に返されます
           content:
             application/json:
               schema:
@@ -241,73 +237,66 @@ paths:
                 properties:
                   project_id:
                     type: integer
+                    description: プロジェクトのID
                   name:
                     type: string
+                    description: プロジェクトの名前
                   description:
                     type: string
+                    description: プロジェクトの説明
                   is_public:
                     type: boolean
-                  latest_commit:
+                    description: プロジェクトの公開状態
+                  latest_commit_image:
                     type: string
+                    description: 最新のコミットの画像
     patch:
-      summary: Toggle Project Visibility
-      description: Toggles the visibility of a project.
-      operationId: toggleProjectVisibility
+      summary: プロジェクトの公開状態の変更
+      description: 指定したプロジェクトの公開状態（公開/非公開）を変更するエンドポイントです。
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
+          description: プロジェクトのID
       responses:
-        '200':
-          description: Project visibility updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+        "200":
+          description: 公開状態の変更が正常に反映されます
     delete:
-      summary: Delete Project
-      description: Deletes a specific project.
-      operationId: deleteProject
+      summary: プロジェクトの削除
+      description: 指定したプロジェクトを削除するエンドポイントです。
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
+          description: プロジェクトのID
       responses:
-        '200':
-          description: Project deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+        "200":
+          description: プロジェクトが正常に削除されます
+
   /project/{project_id}/invite:
     get:
-      summary: Search Users for Project Invitation
-      description: Searches users to invite to the project.
-      operationId: searchUsersForInvite
+      summary: ユーザーの検索と招待リストの取得
+      description: プロジェクトに招待できるユーザーを検索し、リストとして返すエンドポイントです。検索キーワードを指定すると、ユーザー名に基づいた検索結果を返します。
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
+          description: プロジェクトのID
         - in: query
           name: search
           required: false
           schema:
             type: string
+          description: ユーザー名を検索するためのクエリパラメータ
       responses:
-        '200':
-          description: Users found for invitation
+        "200":
+          description: 検索結果に基づくユーザーのリストが返されます
           content:
             application/json:
               schema:
@@ -320,20 +309,22 @@ paths:
                       properties:
                         id:
                           type: integer
+                          description: ユーザーのID
                         username:
                           type: string
+                          description: ユーザー名
     post:
-      summary: Invite User to Project
-      description: Sends an invitation to a user for the project.
-      operationId: inviteUserToProject
+      summary: ユーザーをプロジェクトに招待
+      description: 指定されたユーザーをプロジェクトに招待するエンドポイントです。招待されたユーザーには通知が送信されます。
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
+          description: プロジェクトのID
       requestBody:
-        required: true
+        description: 招待するユーザーのIDを含むリクエストボディ
         content:
           application/json:
             schema:
@@ -341,9 +332,10 @@ paths:
               properties:
                 user_id:
                   type: integer
+                  description: 招待するユーザーのID
       responses:
-        '200':
-          description: User invited successfully
+        "200":
+          description: ユーザーが招待されました
           content:
             application/json:
               schema:
@@ -351,28 +343,23 @@ paths:
                 properties:
                   message:
                     type: string
-        '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                    description: 招待メッセージ
+        "404":
+          description: 指定されたユーザーが存在しない場合
+
   /project/{project_id}/commit:
     post:
-      summary: Add Commit to Project
-      description: Adds a commit to a project.
-      operationId: addCommitToProject
+      summary: プロジェクトへのコミット作成
+      description: プロジェクトに新しいコミットを追加するエンドポイントです。コミットメッセージとコミット画像を受け取ります。画像が提供されない場合は400エラーを返します。
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
+          description: コミットを追加するプロジェクトのID
       requestBody:
-        required: true
+        description: コミットメッセージとコミット画像を含むリクエストボディ
         content:
           application/json:
             schema:
@@ -380,30 +367,31 @@ paths:
               properties:
                 commit_message:
                   type: string
+                  description: コミットメッセージ
+                commit_image:
+                  type: string
+                  format: binary
+                  description: コミットの画像ファイル
       responses:
-        '200':
-          description: Commit added successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+        "201":
+          description: コミットが正常に作成されたことを示します
+        "400":
+          description: コミット画像が提供されていない場合に返されるエラーレスポンス
+
   /project/{project_id}/commits:
     get:
-      summary: Get all commits for a project
-      description: Retrieve the list of commits for a specific project.
-      operationId: getProjectCommits
+      summary: プロジェクトのコミット履歴を取得
+      description: 指定したプロジェクトのコミット履歴を取得するエンドポイントです。コミットメッセージ、コミット画像、投稿日時などが返されます。
       parameters:
-        - name: project_id
-          in: path
+        - in: path
+          name: project_id
           required: true
           schema:
             type: integer
+          description: プロジェクトのID
       responses:
-        200:
-          description: Successfully retrieved commits
+        "200":
+          description: プロジェクトのコミット履歴が返されます
           content:
             application/json:
               schema:
@@ -416,31 +404,145 @@ paths:
                       properties:
                         id:
                           type: integer
-                        message:
+                          description: コミットのID
+                        commit_message:
                           type: string
+                          description: コミットメッセージ
+                        commit_image:
+                          type: string
+                          description: コミット画像のパス
                         date_posted:
                           type: string
                           format: date-time
-                          
+                          description: コミットが投稿された日時
+
+  /project/{project_id}/commit/{commit_id}:
+    get:
+      summary: コミット詳細情報の取得
+      description: |
+        指定したプロジェクトとコミットIDに関連するコミットの詳細情報を取得します。
+        返される情報にはコミットメッセージ、関連するコメント、プロジェクト名、コミット画像、コミット日時などが含まれます。
+      parameters:
+        - name: project_id
+          in: path
+          description: プロジェクトのID
+          required: true
+          schema:
+            type: integer
+        - name: commit_id
+          in: path
+          description: コミットのID
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: コミットの詳細情報
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project_id:
+                    type: integer
+                    description: プロジェクトID
+                  project_name:
+                    type: string
+                    description: プロジェクト名
+                  commit_id:
+                    type: integer
+                    description: コミットID
+                  commit_message:
+                    type: string
+                    description: コミットメッセージ
+                  commit_image:
+                    type: string
+                    description: コミット画像のパス（もしあれば）
+                  date_posted:
+                    type: string
+                    format: date-time
+                    description: コミットの投稿日時
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: コメントのID
+                        content:
+                          type: string
+                          description: コメントの内容
+                        created_at:
+                          type: string
+                          format: date-time
+                          description: コメントが作成された日時
+                        user:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              description: コメントを投稿したユーザーのID
+                            username:
+                              type: string
+                              description: コメントを投稿したユーザーの名前
+        400:
+          description: 不正なリクエスト（コメントの内容が空の場合など）
+        404:
+          description: プロジェクトまたはコミットが見つからない場合
+    post:
+      summary: コミットにコメントを追加
+      description: |
+        指定したコミットに新しいコメントを追加します。
+        コメントはコミットIDに関連付けられ、プロジェクトのメンバーに通知されます。
+      parameters:
+        - name: project_id
+          in: path
+          description: プロジェクトのID
+          required: true
+          schema:
+            type: integer
+        - name: commit_id
+          in: path
+          description: コミットのID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  description: コメントの内容
+                  example: "This is a comment"
+      responses:
+        200:
+          description: コメントが正常に追加され、通知が送信された
+        400:
+          description: コメント内容が空の場合
+          
   /notification/{notification_id}/respond/{response}:
     patch:
-      summary: Respond to a notification
+      summary: "招待に対する応答"
+      description: "ユーザーが通知を受け取り、その通知に対して招待を承諾または拒否するエンドポイントです。"
       parameters:
         - name: notification_id
           in: path
-          description: The ID of the notification
           required: true
+          description: "通知のID"
           schema:
-            type: string
+            type: integer
         - name: response
           in: path
-          description: The response to the notification
           required: true
+          description: "招待に対する応答（'accept' または 'decline'）"
           schema:
             type: string
       responses:
         '200':
-          description: Successful response
-        '400':
-          description: Bad request
-       
+          description: "招待の応答が成功しました"
+        '404':
+          description: "通知が見つかりませんでした"
