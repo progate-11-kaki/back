@@ -2,7 +2,6 @@ from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
 import pytz
 
 japan_timezone = pytz.timezone('Asia/Tokyo')
@@ -27,13 +26,14 @@ class User(UserMixin, db.Model):
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    date_posted = db.Column(db.DateTime, default=get_japan_time, nullable=False)
+    is_public = db.Column(db.Boolean, default=False)
     name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    tags = db.Column(db.PickleType, nullable=False)
+    tags = db.Column(db.PickleType, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
     user = db.relationship('User', backref=db.backref('projects', lazy=True))
-    is_public = db.Column(db.Boolean, default=False)
-    date_posted = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     members = db.relationship('User', secondary='project_members', backref=db.backref('projects_as_member', lazy=True))
     commits = db.relationship('Commit', back_populates='project', cascade="all, delete-orphan")
 
@@ -47,14 +47,13 @@ class ProjectMembers(db.Model):
 
 class Commit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    date_posted = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     commit_message = db.Column(db.String(256), nullable=False)
     commit_image = db.Column(db.String(256))
-    date_posted = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
-    
-    project = db.relationship('Project', back_populates='commits')
-    
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    project = db.relationship('Project', back_populates='commits')
     user = db.relationship('User', backref=db.backref('commits', lazy=True))
 
     def __repr__(self):
@@ -62,17 +61,18 @@ class Commit(db.Model):
 
 class CommitComment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
     date_posted = db.Column(db.DateTime, default=get_japan_time, nullable=False)
+    content = db.Column(db.Text, nullable=False)
     commit_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
     user = db.relationship('User', backref=db.backref('comments', lazy=True))
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    message = db.Column(db.String(256), nullable=False)
+    created_at = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     status = db.Column(db.String(20), default='pending')
-    created_at = db.Column(db.DateTime, default=get_japan_time)
+    message = db.Column(db.String(256), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     commit_id = db.Column(db.Integer, db.ForeignKey('commit.id'), nullable=True)

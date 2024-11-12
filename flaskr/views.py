@@ -1,13 +1,9 @@
-from flask import redirect, url_for, flash, request, send_from_directory, jsonify
+from flask import app, redirect, url_for, flash, request, send_from_directory, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from app import app, db, login_manager
-from models import User, Project, Commit, Notification
+from app import *
+from models import *
 from werkzeug.utils import secure_filename
 import os
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
 
 @app.route('/uploads/<filename>')
 def uploads(filename):
@@ -47,7 +43,7 @@ def login():#ログイン
 
     if user and user.check_password(data.get("password")):
         login_user(user)
-        return jsonify({"message": "ログインに成功しました。"})
+        return jsonify({"message": "ログインに成功しました。"}), 200
     else:
         return jsonify({"message": "ユーザー名またはパスワードが無効です。"}), 401
 
@@ -56,7 +52,7 @@ def login():#ログイン
 @login_required
 def logout():#ログアウト
     logout_user()
-    return jsonify({"message": "ログアウトしました。"})
+    return jsonify({"message": "ログアウトしました。"}), 200
 
 
 @app.route('/register', methods=['POST'])
@@ -69,10 +65,10 @@ def register():#登録
     user.set_password(data.get("password"))
     db.session.add(user)
     db.session.commit()
-    return jsonify({"message": "ユーザー登録が完了しました。"})
+    return jsonify({"message": "ユーザー登録が完了しました。"}), 201
 
 
-@app.route('/profile', methods=['GET', 'POST'])
+@app.route('/profile', methods=['POST'])
 @login_required
 def profile():
     if request.method == 'POST':
@@ -84,7 +80,7 @@ def profile():
             profile_image.save(filepath)
             current_user.profile_image = filename
             db.session.commit()
-            return jsonify(message='プロフィール画像が更新されました。')
+            return jsonify(message='プロフィール画像が更新されました。'), 200
 
     projects = Project.query.filter_by(user_id=current_user.id).all()
     response_data = {
@@ -92,11 +88,11 @@ def profile():
         "projects": [{
             "id": project.id,
             "name": project.name,
-            "latest_commit": project.latest_commit.message if project.latest_commit else None
+            "latest_commit_image": project.commits[-1].commit_image
         } for project in projects],
         "profile_image": current_user.get_profile_image()
     }
-    return jsonify(response_data)
+    return jsonify(response_data), 200
 
 
 @app.route('/makeproject', methods=['POST'])
@@ -114,7 +110,7 @@ def make_project():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         commit_image.save(filepath)
     else:
-        return jsonify(error='画像ファイルをアップロードしてください。'), 400
+        return '', 400
 
     new_project = Project(
         name=project_name,
@@ -134,7 +130,7 @@ def make_project():
     db.session.add(new_commit)
     db.session.commit()
 
-    return jsonify(message='プロジェクトが作成されました！', project_id=new_project.id)
+    return jsonify(project_id=new_project.id), 201
 
 
 
@@ -146,12 +142,12 @@ def project_detail(project_id):
     if request.method == 'PATCH':
         project.is_public = not project.is_public
         db.session.commit()
-        return jsonify(message='プロジェクトの公開設定が更新されました。')
+        return '', 200
 
     elif request.method == 'DELETE':
         db.session.delete(project)
         db.session.commit()
-        return jsonify(message='プロジェクトが削除されました。')
+        return '', 200
 
     latest_commit = Commit.query.filter_by(project_id=project.id).order_by(Commit.id.desc()).first()
     return jsonify(
@@ -159,8 +155,8 @@ def project_detail(project_id):
         name=project.name,
         description=project.description,
         is_public=project.is_public,
-        latest_commit=latest_commit.message if latest_commit else None
-    )
+        latest_commit_image=latest_commit.commit_image
+    ), 200
 
 
 @app.route('/project/<int:project_id>/invite', methods=['GET', 'POST'])
@@ -186,18 +182,18 @@ def invite_user(project_id):
             )
             db.session.add(notification)
             db.session.commit()
-            return jsonify(message=f'{user_to_invite.username}が招待されました。')
+            return jsonify(message=f'{user_to_invite.username}が招待されました。'), 200
         
-        return jsonify(error='ユーザーが見つかりませんでした。'), 404
+        return '', 404
 
-    return jsonify(users=[{"id": user.id, "username": user.username} for user in users])
+    return jsonify(users=[{"id": user.id, "username": user.username} for user in users]), 200
 
 
 @app.route('/project/<int:project_id>/commit', methods=['POST'])
 @login_required
 def commit(project_id):
     project = Project.query.get_or_404(project_id)
-    
+
     commit_message = request.json.get('commit_message')
     commit_image = request.files.get('commit_image')
     
@@ -206,7 +202,7 @@ def commit(project_id):
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         commit_image.save(filepath)
     else:
-        return jsonify(error='画像ファイルをアップロードしてください。'), 400
+        return '', 400
 
     new_commit = Commit(
         commit_message=commit_message,
@@ -217,42 +213,76 @@ def commit(project_id):
     db.session.add(new_commit)
     db.session.commit()
 
-    return jsonify(message='コミットが追加されました！')
+    return '', 201
 
 
 @app.route('/project/<int:project_id>/commits')
 @login_required
 def commits(project_id):
     project = Project.query.get_or_404(project_id)
-    commits = Commit.query.filter_by(project_id=project.id).order_by(Commit.date_posted.desc()).all()
+    commits = Commit.query.filter_by(project_id=project.id).order_by(Commit.id.desc()).all()
 
     return jsonify(commits=[{
         "id": commit.id,
-        "message": commit.commit_message,
+        "commit_message": commit.commit_message,
+        "commit_image": commit.commit_image,
         "date_posted": commit.date_posted
-    } for commit in commits])
+    } for commit in commits]), 200
 
 
-@app.route('/notification/<int:notification_id>/respond/<string:response>', methods=['PATCH'])
+@app.route('/project/<int:project_id>/commit/<int:commit_id>', methods=['GET', 'POST'])
 @login_required
-def respond_to_invitation(notification_id, response):
-    notification = Notification.query.get_or_404(notification_id)
+def commit_detail(project_id, commit_id):  # コミット詳細
+    project = Project.query.get_or_404(project_id)
+    commit = Commit.query.get_or_404(commit_id)
     
-    if notification.user_id == current_user.id:
-        if response == 'accept':
-            notification.status = 'accepted'
-            project = notification.project
-            project.members.append(current_user)
-            db.session.commit()
-            return jsonify(message='招待を承諾しました。')
+    if request.method == 'POST':
+        data = request.get_json()
+        content = data.get('content')
         
-        elif response == 'decline':
-            notification.status = 'declined'
+        if content:
+            comment = CommitComment(content=content, commit_id=commit.id, user_id=current_user.id)
+            db.session.add(comment)
             db.session.commit()
-            return jsonify(message='招待を辞退しました。')
 
-    return jsonify(error='権限がありません。'), 403
+            # プロジェクトのメンバーに通知
+            users = project.members
+            for user in users:
+                if user.id != current_user.id:
+                    notification_message = f'New comment on the commit "{commit.commit_message}" in project "{project.name}".'
+                    notification = Notification(
+                        message=notification_message,
+                        user_id=user.id,
+                        project_id=project.id,
+                        commit_id=commit.id
+                    )
+                    db.session.add(notification)
+            db.session.commit()
 
+            return '', 200
+        else:
+            return '', 400
+
+    comments = CommitComment.query.filter_by(commit_id=commit_id).all()
+    comment_data = [{
+        'id': comment.id,
+        'content': comment.content,
+        'created_at': comment.created_at,
+        'user': {
+            'id': comment.user.id,
+            'username': comment.user.username
+        }
+    } for comment in comments]
+
+    return jsonify(
+        project_id=project.id,
+        project_name=project.name,
+        commit_id=commit.id,
+        commit_message=commit.commit_message,
+        commit_image=commit.commit_image,
+        date_posted=commit.created_at,
+        comments=comment_data
+    ), 200
 #__________________________________通知_________________________________________
 # @event.listens_for(db.session, 'after_commit')
 # def create_commit_notification(session):
@@ -273,25 +303,25 @@ def respond_to_invitation(notification_id, response):
 #     session.commit()
 
 
-@app.route('/notification/<int:notification_id>/respond/<string:response>', methods=['GET'])
+@app.route('/notification/<int:notification_id>/respond/<string:response>', methods=['PATCH'])
 @login_required
 def respond_to_invitation(notification_id, response):
-    notification = Notification.query.get_or_404(notification_id)
+    data = request.get_json()
+    response = data.get('response')
+    notification = Notification.query.filter_by(user_id=current_user.id).all()
     
-    if notification.user_id == current_user.id:
-        if response == 'accept':
-            notification.status = 'accepted'
-            # メンバーに追加する
-            project = notification.project
-            project.members.append(current_user)  # ここでメンバーに追加
-            db.session.commit()
-            flash('You have accepted the invitation.', 'success')
-        elif response == 'decline':
-            notification.status = 'declined'
-            db.session.commit()
-            flash('You have declined the invitation.', 'error')
-    else:
-        flash('You are not authorized to respond to this notification.', 'error')
-
-    return redirect(url_for('home'))
+    if not notification:
+        return '', 404
+    
+    if response == 'accept':
+        notification.status = 'accepted'
+        project = notification.project
+        project.members.append(current_user)
+        db.session.commit()
+        return '', 200
+    
+    elif response == 'decline':
+        notification.status = 'declined'
+        db.session.commit()
+        return '', 200
 
