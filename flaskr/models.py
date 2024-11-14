@@ -1,6 +1,5 @@
 from app import db
 from flask import current_app
-from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import pytz
@@ -11,9 +10,9 @@ def get_japan_time():
     return datetime.now(japan_timezone)
 
 
-class User(UserMixin, db.Model):
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True, nullable=False)
+    username = db.Column(db.String(20), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     token = db.Column(db.String(256), nullable=True, unique=True)
     profile_image = db.Column(db.String(120), nullable=True)
@@ -26,14 +25,20 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-    
+
     def generate_token(self):
         payload = {"user_id": self.id}
         token = jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm="HS256")
         self.token = token
         db.session.commit()
         return token
-    
+
+class Guest:
+    def __init__(self):
+        self.id = None
+        self.username = None
+        self.profile_image = None
+
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date_posted = db.Column(db.DateTime, default=get_japan_time, nullable=False)
@@ -80,12 +85,14 @@ class CommitComment(db.Model):
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    type = db.Column(db.String(20), nullable=False)
     created_at = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     status = db.Column(db.String(20), default='pending')
-    message = db.Column(db.String(256), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    project_name = db.Column(db.String(128))
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     commit_id = db.Column(db.Integer, db.ForeignKey('commit.id'), nullable=True)
+    commit_message = db.Column(db.String(256))
 
     user = db.relationship('User', backref=db.backref('notifications', lazy=True))
     project = db.relationship('Project', backref=db.backref('notifications', lazy=True))
