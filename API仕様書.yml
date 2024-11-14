@@ -5,8 +5,8 @@ info:
   version: 1.0.0
 
 servers:
-  - url: http://localhost:5000
-    description: ローカルサーバー
+  - url: https://kaki-back.onrender.com
+    description: 本番環境
 
 paths:
   /userinfo:
