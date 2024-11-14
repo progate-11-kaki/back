@@ -1,6 +1,6 @@
 from flask import app, request, send_from_directory, jsonify
-from app import *
-from models import *
+from flaskr.app import *
+from flaskr.models import *
 from werkzeug.utils import secure_filename
 from functools import wraps
 import jwt
@@ -182,7 +182,6 @@ def make_project(user):
 
 
 @app.route('/project/<int:project_id>', methods=['GET', 'PATCH', 'DELETE'])
-@token_required
 def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
     
