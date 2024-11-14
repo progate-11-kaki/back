@@ -1,22 +1,45 @@
 from flask import app, request, send_from_directory, jsonify
-from flask_login import login_user, logout_user, login_required, current_user
 from app import *
 from models import *
 from werkzeug.utils import secure_filename
-import os
+from functools import wraps
 import jwt
-from datetime import datetime, timedelta
-from flask import jsonify
+import os
 
 @app.route('/uploads/<filename>')
 def uploads(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+def token_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization'].split(" ")[1]  # "Bearer <token>"
+
+        if not token:
+            return jsonify({'message': 'トークンが必要です'}), 401
+
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            current_user = User.query.get(data['user_id'])
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'トークンの期限が切れています'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'message': '無効なトークンです'}), 401
+
+        return f(current_user, *args, **kwargs)
+    return decorated_function
+
 #＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿ここから画面＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
+@app.route('/test')
+def test():
+    return 'Hello world'
+
 @app.route('/', methods=['GET'])
-@login_required
-def home():
-    notifications = Notification.query.filter_by(user_id=current_user.id, status='pending').all()
+@token_required
+def home(user):
+    notifications = Notification.query.filter_by(user_id=user.id, status='pending').all()
     search_query = request.args.get('search', '')
     if search_query:
         projects = Project.query.filter(
@@ -45,17 +68,16 @@ def login():#ログイン
     user = User.query.filter_by(username=data.get("username")).first()
 
     if user and user.check_password(data.get("password")):
-        login_user(user)
-        return jsonify({"message": "ログインに成功しました。"}), 200
+        token = user.generate_token()
+        return  jsonify({"token": token}), 200
     else:
-        return jsonify({"message": "ユーザー名またはパスワードが無効です。"}), 401
+        return '', 401
 
 
-@app.route('/logout')
-@login_required
+@app.route('/logout', methods=['GET'])
+@token_required
 def logout():#ログアウト
-    logout_user()
-    return jsonify({"message": "ログアウトしました。"}), 200
+    return '', 200
 
 
 @app.route('/register', methods=['POST'])
@@ -64,16 +86,20 @@ def register():#登録
     if data.get("password") != data.get("password2"):
         return jsonify({"message": "パスワードと確認用パスワードが一致しません。"}), 400
     
+    if User.query.filter_by(username=User.username).first():
+        return jsonify({"message": "このユーザー名は既に使用されています。"}), 409
+    
     user = User(username=data.get("username"))
     user.set_password(data.get("password"))
     db.session.add(user)
     db.session.commit()
-    return jsonify({"message": "ユーザー登録が完了しました。"}), 201
+    token = user.generate_token()
+    return jsonify({"token": token}), 201
 
 
 @app.route('/profile', methods=['POST'])
-@login_required
-def profile():
+@token_required
+def profile(user):
     if request.method == 'POST':
         profile_image = request.files.get('profile_image')
         
@@ -81,26 +107,26 @@ def profile():
             filename = secure_filename(profile_image.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             profile_image.save(filepath)
-            current_user.profile_image = filename
+            user.profile_image = filename
             db.session.commit()
             return jsonify(message='プロフィール画像が更新されました。'), 200
 
-    projects = Project.query.filter_by(user_id=current_user.id).all()
+    projects = Project.query.filter_by(user_id=user.id).all()
     response_data = {
-        "username": current_user.username,
+        "username": user.username,
         "projects": [{
             "id": project.id,
             "name": project.name,
             "latest_commit_image": project.commits[-1].commit_image
         } for project in projects],
-        "profile_image": current_user.get_profile_image()
+        "profile_image": user.get_profile_image()
     }
     return jsonify(response_data), 200
 
 
 @app.route('/makeproject', methods=['POST'])
-@login_required
-def make_project():
+@token_required
+def make_project(user):
     data = request.json
     project_name = data.get('project_name')
     project_description = data.get('project_description')
@@ -119,7 +145,7 @@ def make_project():
         name=project_name,
         description=project_description,
         tags=tags,
-        user_id=current_user.id
+        user_id=user.id
     )
     db.session.add(new_project)
     db.session.commit()
@@ -128,7 +154,7 @@ def make_project():
         commit_message=commit_message,
         commit_image=filepath,
         project_id=new_project.id,
-        user_id=current_user.id
+        user_id=user.id
     )
     db.session.add(new_commit)
     db.session.commit()
@@ -138,7 +164,7 @@ def make_project():
 
 
 @app.route('/project/<int:project_id>', methods=['GET', 'PATCH', 'DELETE'])
-@login_required
+@token_required
 def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
     
@@ -163,7 +189,7 @@ def project_detail(project_id):
 
 
 @app.route('/project/<int:project_id>/invite', methods=['GET', 'POST'])
-@login_required
+@token_required
 def invite_user(project_id):
     project = Project.query.get_or_404(project_id)
     
@@ -193,8 +219,8 @@ def invite_user(project_id):
 
 
 @app.route('/project/<int:project_id>/commit', methods=['POST'])
-@login_required
-def commit(project_id):
+@token_required
+def commit(user, project_id):
     project = Project.query.get_or_404(project_id)
 
     commit_message = request.json.get('commit_message')
@@ -211,7 +237,7 @@ def commit(project_id):
         commit_message=commit_message,
         commit_image=filepath,
         project_id=project.id,
-        user_id=current_user.id
+        user_id=user.id
     )
     db.session.add(new_commit)
     db.session.commit()
@@ -220,7 +246,7 @@ def commit(project_id):
 
 
 @app.route('/project/<int:project_id>/commits')
-@login_required
+@token_required
 def commits(project_id):
     project = Project.query.get_or_404(project_id)
     commits = Commit.query.filter_by(project_id=project.id).order_by(Commit.id.desc()).all()
@@ -234,8 +260,8 @@ def commits(project_id):
 
 
 @app.route('/project/<int:project_id>/commit/<int:commit_id>', methods=['GET', 'POST'])
-@login_required
-def commit_detail(project_id, commit_id):  # コミット詳細
+@token_required
+def commit_detail(user, project_id, commit_id):  # コミット詳細
     project = Project.query.get_or_404(project_id)
     commit = Commit.query.get_or_404(commit_id)
     
@@ -244,14 +270,14 @@ def commit_detail(project_id, commit_id):  # コミット詳細
         content = data.get('content')
         
         if content:
-            comment = CommitComment(content=content, commit_id=commit.id, user_id=current_user.id)
+            comment = CommitComment(content=content, commit_id=commit.id, user_id=user.id)
             db.session.add(comment)
             db.session.commit()
 
             # プロジェクトのメンバーに通知
             users = project.members
             for user in users:
-                if user.id != current_user.id:
+                if user.id != user.id:
                     notification_message = f'New comment on the commit "{commit.commit_message}" in project "{project.name}".'
                     notification = Notification(
                         message=notification_message,
@@ -287,6 +313,30 @@ def commit_detail(project_id, commit_id):  # コミット詳細
         comments=comment_data
     ), 200
 #__________________________________通知_________________________________________
+
+@app.route('/notification/<int:notification_id>/respond/<string:response>', methods=['PATCH'])
+@token_required
+def respond_to_invitation(user, notification, response):
+    data = request.get_json()
+    response = data.get('response')
+    notification = Notification.query.filter_by(user_id=user.id).all()
+    
+    if not notification:
+        return '', 404
+    
+    if response == 'accept':
+        notification.status = 'accepted'
+        project = notification.project
+        project.members.append(user)
+        db.session.commit()
+        return '', 200
+    
+    elif response == 'decline':
+        notification.status = 'declined'
+        db.session.commit()
+        return '', 200
+    
+
 # @event.listens_for(db.session, 'after_commit')
 # def create_commit_notification(session):
 #     for target in session.new:
@@ -304,27 +354,3 @@ def commit_detail(project_id, commit_id):  # コミット詳細
 #                     )
 #                     session.add(notification)
 #     session.commit()
-
-
-@app.route('/notification/<int:notification_id>/respond/<string:response>', methods=['PATCH'])
-@login_required
-def respond_to_invitation(notification_id, response):
-    data = request.get_json()
-    response = data.get('response')
-    notification = Notification.query.filter_by(user_id=current_user.id).all()
-    
-    if not notification:
-        return '', 404
-    
-    if response == 'accept':
-        notification.status = 'accepted'
-        project = notification.project
-        project.members.append(current_user)
-        db.session.commit()
-        return '', 200
-    
-    elif response == 'decline':
-        notification.status = 'declined'
-        db.session.commit()
-        return '', 200
-

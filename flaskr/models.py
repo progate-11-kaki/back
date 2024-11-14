@@ -1,8 +1,10 @@
 from app import db
+from flask import current_app
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import pytz
+import jwt
 
 japan_timezone = pytz.timezone('Asia/Tokyo')
 def get_japan_time():
@@ -13,6 +15,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    token = db.Column(db.String(256), nullable=True, unique=True)
     profile_image = db.Column(db.String(120), nullable=True)
 
     def get_profile_image(self):
@@ -23,7 +26,14 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
+    
+    def generate_token(self):
+        payload = {"user_id": self.id}
+        token = jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm="HS256")
+        self.token = token
+        db.session.commit()
+        return token
+    
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date_posted = db.Column(db.DateTime, default=get_japan_time, nullable=False)
