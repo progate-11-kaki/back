@@ -4,13 +4,13 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 import os
 
+app.config.from_pyfile('../instance/config.py')
 app = Flask(__name__)
 CORS(app)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'mysecret'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-# app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
