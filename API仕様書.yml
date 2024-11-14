@@ -120,52 +120,98 @@ paths:
         400:
           description: "パスワードが一致しません。"
 
-  /profile:
+  /profile/{user_id}:
+    get:
+      summary: "ユーザーのプロフィール情報を取得"
+      description: "指定したユーザーIDのプロフィール情報を取得します。"
+      parameters:
+        - name: "user_id"
+          in: "path"
+          required: true
+          description: "ユーザーのID"
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "ユーザーのプロフィール情報"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  username:
+                    type: "string"
+                    example: "john_doe"
+                  projects:
+                    type: "array"
+                    items:
+                      type: "object"
+                      properties:
+                        id:
+                          type: "integer"
+                          example: 1
+                        name:
+                          type: "string"
+                          example: "Project A"
+                        latest_commit_image:
+                          type: "string"
+                          example: "/path/to/latest_commit_image.png"
+                  profile_image:
+                    type: "string"
+                    example: "/path/to/profile_image.png"
+        "401":
+          description: "認証エラー。トークンが無効または未提供。"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  message:
+                    type: "string"
+                    example: "無効なトークンです"
+
     post:
-      summary: プロフィール情報と画像の更新
-      description: 認証済みユーザーのプロフィール画像をアップロードし、プロジェクト情報を含むユーザーのプロフィール情報を取得します。
+      summary: "プロフィール画像を更新"
+      description: "ユーザーのプロフィール画像を更新します。"
+      parameters:
+        - name: "user_id"
+          in: "path"
+          required: true
+          description: "ユーザーのID"
+          schema:
+            type: "integer"
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
-              type: object
+              type: "object"
               properties:
                 profile_image:
-                  type: string
-                  format: binary
-                  description: プロフィール画像のファイルアップロード
+                  type: "string"
+                  format: "binary"
+                  description: "アップロードするプロフィール画像"
       responses:
         "200":
-          description: 成功時にプロフィール情報を返します
+          description: "プロフィール画像が正常に更新されました。"
           content:
             application/json:
               schema:
-                type: object
+                type: "object"
                 properties:
                   message:
-                    type: string
-                    description: プロフィール画像が更新されたことを示すメッセージ
-                  username:
-                    type: string
-                    description: ユーザー名
-                  projects:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                          description: プロジェクトのID
-                        name:
-                          type: string
-                          description: プロジェクト名
-                        latest_commit_image:
-                          type: string
-                          description: 最新コミットの画像ファイル名
-                  profile_image:
-                    type: string
-                    description: プロフィール画像のファイルパスまたはURL
+                    type: "string"
+                    example: "プロフィール画像が更新されました。"
+        "401":
+          description: "認証エラー。トークンが無効または未提供。"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  message:
+                    type: "string"
+                    example: "無効なトークンです"
 
   /makeproject:
     post:
@@ -279,24 +325,23 @@ paths:
 
   /project/{project_id}/invite:
     get:
-      summary: ユーザーの検索と招待リストの取得
-      description: プロジェクトに招待できるユーザーを検索し、リストとして返すエンドポイントです。検索キーワードを指定すると、ユーザー名に基づいた検索結果を返します。
+      summary: プロジェクトへの招待ユーザーを検索
+      description: プロジェクトに招待するユーザーをユーザー名で検索して一覧表示します。
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
-          description: プロジェクトのID
+          description: 招待を行うプロジェクトのID
         - in: query
           name: search
-          required: false
           schema:
             type: string
-          description: ユーザー名を検索するためのクエリパラメータ
+          description: 検索するユーザー名
       responses:
-        "200":
-          description: 検索結果に基づくユーザーのリストが返されます
+        '200':
+          description: ユーザー検索結果を取得しました。
           content:
             application/json:
               schema:
@@ -309,22 +354,24 @@ paths:
                       properties:
                         id:
                           type: integer
-                          description: ユーザーのID
+                          description: ユーザーID
                         username:
                           type: string
                           description: ユーザー名
+        '401':
+          description: 認証が必要です。
     post:
-      summary: ユーザーをプロジェクトに招待
-      description: 指定されたユーザーをプロジェクトに招待するエンドポイントです。招待されたユーザーには通知が送信されます。
+      summary: プロジェクトへのユーザー招待
+      description: 指定したユーザーIDのユーザーをプロジェクトに招待し、通知を作成します。
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
-          description: プロジェクトのID
+          description: 招待を行うプロジェクトのID
       requestBody:
-        description: 招待するユーザーのIDを含むリクエストボディ
+        required: true
         content:
           application/json:
             schema:
@@ -334,8 +381,8 @@ paths:
                   type: integer
                   description: 招待するユーザーのID
       responses:
-        "200":
-          description: ユーザーが招待されました
+        '200':
+          description: 招待が成功しました。
           content:
             application/json:
               schema:
@@ -343,9 +390,11 @@ paths:
                 properties:
                   message:
                     type: string
-                    description: 招待メッセージ
-        "404":
-          description: 指定されたユーザーが存在しない場合
+                    description: 招待が成功したユーザー名のメッセージ
+        '404':
+          description: 招待するユーザーが見つかりませんでした。
+        '401':
+          description: 認証が必要です。
 
   /project/{project_id}/commit:
     post:
