@@ -5,8 +5,8 @@ info:
   version: 1.0.0
 
 servers:
-  - url: https://kaki-back.onrender.com
-    description: 本番環境
+  - url: http://localhost:5000
+    description: ローカルサーバー
 
 paths:
   /userinfo:
@@ -34,7 +34,7 @@ paths:
   /:
     get:
       summary: "ホーム画面の情報取得"
-      description: "プロジェクト一覧と通知情報を取得します。ユーザーが未認証の場合はゲストとして処理されます。"
+      description: "プロジェクト一覧と通知情報を取得します。ユーザーが未認証の場合はゲストとして処理されます。検索と並べ替えの機能も提供します。"
       parameters:
         - in: query
           name: search
@@ -42,6 +42,14 @@ paths:
             type: string
           required: false
           description: "検索クエリ。プロジェクト名または説明に基づいてフィルタリングします。"
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [stars, created_at]
+            default: stars
+          required: false
+          description: "並べ替えの基準。'stars'はスター数、'created_at'は作成日で並べ替えます。"
       responses:
         '200':
           description: "ホーム画面の情報取得に成功しました。"
@@ -68,6 +76,10 @@ paths:
                         created_user:
                           type: integer
                           description: "プロジェクトの作成者のID"
+                        created_at:
+                          type: string
+                          format: date-time
+                          description: "プロジェクトの作成日時"
                   notifications:
                     type: array
                     description: "ユーザーに関連する通知の一覧（ゲストユーザーには表示されません）。"
@@ -79,7 +91,7 @@ paths:
                           description: "通知のID"
                         type:
                           type: string
-                          description: "通知の種類、commit,invite,commentの3種"
+                          description: "通知の種類"
                         created_at:
                           type: string
                           format: date-time
@@ -88,6 +100,8 @@ paths:
                     type: integer
                     nullable: true
                     description: "現在のユーザーのID。ゲストユーザーの場合はnullです。"
+        '401':
+          description: "認証が必要です。"
   
   /login:
     post:
@@ -323,18 +337,18 @@ paths:
 
   /project/{project_id}:
     get:
-      summary: "プロジェクト詳細情報の取得"
-      description: "指定されたプロジェクトの詳細情報を取得します。"
+      summary: "プロジェクトの詳細情報を取得"
+      description: "指定したプロジェクトIDに基づいてプロジェクトの詳細情報を取得します。"
       parameters:
         - in: path
           name: project_id
           required: true
           schema:
             type: integer
-          description: "プロジェクトのID"
+          description: "プロジェクトID"
       responses:
         '200':
-          description: "プロジェクトの詳細情報を正常に取得しました。"
+          description: "プロジェクトの詳細情報"
           content:
             application/json:
               schema:
@@ -351,16 +365,138 @@ paths:
                     description: "プロジェクトの説明"
                   is_public:
                     type: boolean
-                    description: "プロジェクトが公開されているかどうか"
+                    description: "プロジェクトの公開状態"
                   latest_commit_image:
                     type: string
-                    description: "最新のコミット画像のパス"
+                    description: "最新のコミット画像のURL"
                   created_user:
                     type: integer
-                    description: "プロジェクトを作成したユーザーのID"
+                    description: "プロジェクトの作成者のID"
                   project_member:
                     type: array
-                    description: "プロジェクトのメンバーのリスト"
+                    description: "プロジェクトメンバーの一覧"
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: "ユーザーID"
+                        username:
+                          type: string
+                          description: "ユーザー名"
+                  project_star_count:
+                    type: integer
+                    description: "プロジェクトのスター数"
+                  star_entry:
+                    type: object
+                    nullable: true
+                    description: "ユーザーがスターをつけているかどうか"
+                    properties:
+                      user_id:
+                        type: integer
+                        description: "ユーザーID"
+                      project_id:
+                        type: integer
+                        description: "プロジェクトID"
+                      starred:
+                        type: boolean
+                        description: "スターをつけたかどうか"
+        '404':
+          description: "プロジェクトが見つからない場合"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Project not found"
+    patch:
+      summary: "プロジェクトの詳細を更新"
+      description: "プロジェクトの詳細（公開状態、スターの付け外し）を更新します。"
+      parameters:
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
+          description: "プロジェクトID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  description: "実行するアクション（'toggle_visibility' or 'toggle_star'）"
+                  example: "toggle_visibility"
+      responses:
+        '200':
+          description: "プロジェクトの更新に成功"
+        '400':
+          description: "無効なアクション"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Invalid action"
+    delete:
+      summary: "プロジェクトを削除"
+      description: "指定したプロジェクトを削除します。"
+      parameters:
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
+          description: "プロジェクトID"
+      responses:
+        '200':
+          description: "プロジェクトが削除されました"
+        '404':
+          description: "プロジェクトが見つからない場合"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Project not found"
+
+  /project/{project_id}/invite:
+    get:
+      summary: "プロジェクトに招待できるユーザーの一覧を取得"
+      description: "プロジェクトに招待できるユーザーを検索するためのAPIです。検索クエリが指定された場合、そのクエリに基づくユーザーが取得されます。"
+      parameters:
+        - in: path
+          name: project_id
+          required: true
+          description: "プロジェクトのID"
+          schema:
+            type: integer
+        - in: query
+          name: search
+          required: false
+          description: "検索クエリ。ユーザー名に基づいてフィルタリングします。"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "ユーザーの一覧を正常に取得しました。"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project_member:
+                    type: array
+                    description: "プロジェクトのメンバーの一覧。"
                     items:
                       type: object
                       properties:
@@ -370,65 +506,12 @@ paths:
                         username:
                           type: string
                           description: "メンバーのユーザー名"
-    patch:
-      summary: "プロジェクトの公開状態を変更"
-      description: "指定されたプロジェクトの公開/非公開状態を変更します。"
-      parameters:
-        - in: path
-          name: project_id
-          required: true
-          schema:
-            type: integer
-          description: "プロジェクトのID"
-      responses:
-        '200':
-          description: "プロジェクトの公開状態が正常に変更されました。"
-    delete:
-      summary: "プロジェクトの削除"
-      description: "指定されたプロジェクトを削除します。"
-      parameters:
-        - in: path
-          name: project_id
-          required: true
-          schema:
-            type: integer
-          description: "プロジェクトのID"
-      responses:
-        '200':
-          description: "プロジェクトが正常に削除されました。"
-        '404':
-          description: "プロジェクトが見つかりませんでした。"
-        '401':
-          description: "認証が必要です。"
-
-  /project/{project_id}/invite:
-    get:
-      summary: "ユーザーを招待するための検索"
-      description: "指定されたプロジェクトの招待可能なユーザーを検索します。検索クエリでユーザー名をフィルタリングできます。"
-      parameters:
-        - in: path
-          name: project_id
-          required: true
-          schema:
-            type: integer
-          description: "プロジェクトのID"
-        - in: query
-          name: search
-          schema:
-            type: string
-          required: false
-          description: "検索クエリ。ユーザー名を基に検索します。"
-      responses:
-        '200':
-          description: "ユーザーの検索結果が返されます。"
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
+                        profile_image:
+                          type: string
+                          description: "メンバーのプロフィール画像"
                   users:
                     type: array
-                    description: "検索されたユーザーのリスト"
+                    description: "検索されたユーザーの一覧。"
                     items:
                       type: object
                       properties:
@@ -438,19 +521,23 @@ paths:
                         username:
                           type: string
                           description: "ユーザーのユーザー名"
+                        user_image:
+                          type: string
+                          description: "ユーザーのプロフィール画像"
         '401':
           description: "認証が必要です。"
     post:
-      summary: "ユーザーをプロジェクトに招待"
-      description: "指定されたプロジェクトにユーザーを招待します。招待されたユーザーには通知が送られます。"
+      summary: "プロジェクトにユーザーを招待"
+      description: "指定されたユーザーをプロジェクトに招待するためのAPIです。招待されたユーザーには通知が送信されます。"
       parameters:
         - in: path
           name: project_id
           required: true
+          description: "プロジェクトのID"
           schema:
             type: integer
-          description: "プロジェクトのID"
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -459,11 +546,9 @@ paths:
                 user_id:
                   type: integer
                   description: "招待するユーザーのID"
-              required:
-                - user_id
       responses:
         '200':
-          description: "ユーザーが招待されました。"
+          description: "ユーザーが正常に招待されました。"
           content:
             application/json:
               schema:
@@ -471,7 +556,7 @@ paths:
                 properties:
                   message:
                     type: string
-                    description: "招待メッセージ"
+                    description: "招待されたユーザーの情報"
         '404':
           description: "指定されたユーザーが見つかりませんでした。"
         '401':
@@ -596,7 +681,7 @@ paths:
                   commit_image:
                     type: string
                     description: "コミットに関連付けられた画像"
-                  date_posted:
+                  created_at:
                     type: string
                     format: date-time
                     description: "コミットの作成日時"
