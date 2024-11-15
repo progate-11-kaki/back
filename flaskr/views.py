@@ -59,22 +59,20 @@ def home(user=None):
     search_query = request.args.get('search', '')
     sort_order = request.args.get('sort', 'stars')
 
+    project_query = Project.query.filter(Project.is_public == True)
+
     if search_query:
-        projects = Project.query.filter(
-            Project.is_public == True,
+        project_query = project_query.filter(
             (Project.name.like(f'%{search_query}%') |
              Project.description.like(f'%{search_query}%'))
-            #  Project.tags.any(like(f'%{search_query}%'))
-        ).all()
-    else:
-        projects = Project.query.filter(Project.is_public == True).all()
+        )
 
     if sort_order == 'stars':
-        projects = projects.join(stars_table).group_by(Project.id).order_by(db.func.count(stars_table.c.project_id).desc())
+        project_query = project_query.join(stars_table).group_by(Project.id).order_by(db.func.count(stars_table.c.project_id).desc())
     else:
-        projects = projects.order_by(Project.created_at.desc())
+        project_query = project_query.order_by(Project.date_posted.desc())
 
-    projects = projects.all()
+    projects = project_query.all()
 
     project_data = [
         {"id": project.id, "name": project.name, "description": project.description, "created_user": project.user_id, "created_at": project.date_posted}
