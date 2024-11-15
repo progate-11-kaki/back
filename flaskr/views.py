@@ -57,6 +57,8 @@ def home(user=None):
         user = Guest()
     notifications = Notification.query.filter_by(user_id=user.id, status='pending').all()
     search_query = request.args.get('search', '')
+    sort_order = request.args.get('sort', 'stars')
+
     if search_query:
         projects = Project.query.filter(
             Project.is_public == True,
@@ -67,8 +69,15 @@ def home(user=None):
     else:
         projects = Project.query.filter(Project.is_public == True).all()
 
+    if sort_order == 'stars':
+        projects = projects.join(stars_table).group_by(Project.id).order_by(db.func.count(stars_table.c.project_id).desc())
+    else:
+        projects = projects.order_by(Project.created_at.desc())
+
+    projects = projects.all()
+
     project_data = [
-        {"id": project.id, "name": project.name, "description": project.description, "created_user": project.user_id}
+        {"id": project.id, "name": project.name, "description": project.description, "created_user": project.user_id, "created_at": project.date_posted}
         for project in projects
     ]
     notification_data = [
@@ -116,6 +125,8 @@ def register():#登録
 
 @app.route('/profile/<int:user_id>', methods=['GET','POST'])
 def profile(user):
+    if user is None:
+        user = Guest()
     if request.method == 'POST':
         profile_image = request.files.get('profile_image')
         
@@ -182,13 +193,36 @@ def make_project(user):
 
 
 @app.route('/project/<int:project_id>', methods=['GET', 'PATCH', 'DELETE'])
-def project_detail(project_id):
+def project_detail(project_id,user):
+    if user is None:
+        user = Guest()
     project = Project.query.get_or_404(project_id)
+    star_entry = db.session.execute(stars_table.select().where(stars_table.c.user_id == user.id,stars_table.c.project_id == project.id)).fetchone()
     
     if request.method == 'PATCH':
-        project.is_public = not project.is_public
-        db.session.commit()
-        return '', 200
+        action = request.json.get('action')
+        if action == 'toggle_visibility':
+            project.is_public = not project.is_public
+            db.session.commit()
+            return '', 200
+
+        elif action == 'toggle_star':
+            if star_entry:
+                db.session.execute(
+                    stars_table.delete().where(
+                        stars_table.c.user_id == user.id,
+                        stars_table.c.project_id == project.id
+                    )
+                )
+                project.star_count -= 1
+            else:
+                db.session.execute(
+                    stars_table.insert().values(user_id=user.id, project_id=project.id, starred=True)
+                )
+                project.star_count += 1
+
+            db.session.commit()
+            return '', 200
 
     elif request.method == 'DELETE':
         db.session.delete(project)
@@ -203,7 +237,9 @@ def project_detail(project_id):
         is_public=project.is_public,
         latest_commit_image=latest_commit.commit_image,
         created_user=project.user_id,
-        project_member=project.members
+        project_member=project.members,
+        project_star_count=project.star_count,
+        star_entry=star_entry
     ), 200
 
 
@@ -235,7 +271,7 @@ def invite_user(project_id):
         
         return '', 404
 
-    return jsonify(users=[{"id": user.id, "username": user.username} for user in users]), 200
+    return jsonify(project_member=project.members, users=[{"id": user.id, "username": user.username, "user_image": user.profile_image} for user in users]), 200
 
 
 @app.route('/project/<int:project_id>/commit', methods=['POST'])
@@ -287,7 +323,7 @@ def commits(project_id):
         "id": commit.id,
         "commit_message": commit.commit_message,
         "commit_image": commit.commit_image,
-        "date_posted": commit.date_posted
+        "created_at": commit.date_posted
     } for commit in commits]), 200
 
 
@@ -341,7 +377,7 @@ def commit_detail(user, project_id, commit_id):
         commit_id=commit.id,
         commit_message=commit.commit_message,
         commit_image=commit.commit_image,
-        date_posted=commit.created_at,
+        created_at=commit.created_at,
         comments=comment_data
     ), 200
 #__________________________________通知_________________________________________

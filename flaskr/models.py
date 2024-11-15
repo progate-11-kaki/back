@@ -9,6 +9,11 @@ japan_timezone = pytz.timezone('Asia/Tokyo')
 def get_japan_time():
     return datetime.now(japan_timezone)
 
+stars_table = db.Table('stars',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('project_id', db.Integer, db.ForeignKey('project.id'), primary_key=True),
+    db.Column('starred', db.Boolean, default=True)
+)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -16,6 +21,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     token = db.Column(db.String(256), nullable=True, unique=True)
     profile_image = db.Column(db.String(120), nullable=True)
+    stars = db.relationship('Project', secondary=stars_table, backref=db.backref('stargazers'))
 
     def get_profile_image(self):
         return self.profile_image or 'default_profile.png'
@@ -47,6 +53,8 @@ class Project(db.Model):
     description = db.Column(db.Text, nullable=False)
     tags = db.Column(db.PickleType, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    stars = db.Column(db.Integer)
+    star_count = db.Column(db.Integer, default=0)
 
     user = db.relationship('User', backref=db.backref('projects', lazy=True))
     members = db.relationship('User', secondary='project_members', backref=db.backref('projects_as_member', lazy=True))
