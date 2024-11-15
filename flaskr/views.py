@@ -1,14 +1,10 @@
-from flask import app, request, send_from_directory, jsonify
+from flask import app, request, jsonify
 from flaskr.app import *
 from flaskr.models import *
 from werkzeug.utils import secure_filename
 from functools import wraps
 import jwt
 import os
-
-@app.route('/uploads/<filename>')
-def uploads(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 def token_required(f):
@@ -24,6 +20,14 @@ def token_required(f):
         try:
             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
             current_user = User.query.get(data['user_id'])
+            if not current_user:
+                return jsonify({'message': 'ユーザーが見つかりません'}), 404
+
+            user_info = {
+                "username": current_user.username,
+                "user_id": current_user.id,
+                "user_profile_image": current_user.profile_image
+            }
         except jwt.ExpiredSignatureError:
             return jsonify({'message': 'トークンの期限が切れています'}), 401
         except jwt.InvalidTokenError:
@@ -34,27 +38,9 @@ def token_required(f):
 
 #＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿ここからエンドポイント＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 
-@app.route('/userinfo', methods=['GET'])
-def userinfo(user=None):
-    if user is None:
-        user = Guest()
-        response_data = {
-            "username": None,
-            "profile_image": None
-        }
-        return jsonify(response_data),200
-    
-    response_data = {
-        "username": user.username,
-        "profile_image": user.get_profile_image()
-    }
-    return jsonify(response_data),200
-
-
 @app.route('/', methods=['GET'])
-def home(user=None):
-    if user is None:
-        user = Guest()
+@token_required
+def home(user):
     notifications = Notification.query.filter_by(user_id=user.id, status='pending').all()
     search_query = request.args.get('search', '')
     sort_order = request.args.get('sort', 'stars')
@@ -87,6 +73,7 @@ def home(user=None):
 
 
 @app.route('/login', methods=['POST'])
+@token_required
 def login():#ログイン
     data = request.json
     user = User.query.filter_by(username=data.get("username")).first()
@@ -122,22 +109,20 @@ def register():#登録
 
 
 @app.route('/profile/<int:user_id>', methods=['GET','POST'])
+@token_required
 def profile(user):
-    if user is None:
-        user = Guest()
     if request.method == 'POST':
-        profile_image = request.files.get('profile_image')
+        profile_image = request.form.get('profile_image')
         
         
         if profile_image:
-            filename = secure_filename(profile_image.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            profile_image.save(filepath)
-            user.profile_image = filename
+            image_binary = profile_image.read()
+            user.profile_image = image_binary
             db.session.commit()
             return jsonify(message='プロフィール画像が更新されました。'), 200
 
     projects = Project.query.filter_by(user_id=user.id).all()
+    
     response_data = {
         "username": user.username,
         "projects": [{
@@ -146,7 +131,8 @@ def profile(user):
             "created_user":project.user_id,
             "latest_commit_image": project.commits[-1].commit_image
         } for project in projects],
-        "profile_image": user.get_profile_image(),"user_id":user.id
+        "profile_image": user.profile_image,
+        "user_id":user.id
     }
     return jsonify(response_data), 200
 
@@ -159,12 +145,10 @@ def make_project(user):
     project_description = data.get('project_description')
     tags = data.get('tags', '').split(',')
     commit_message = data.get('commit_message')
-    commit_image = request.files.get('commit_image')
+    commit_image = request.form.get('commit_image')
 
     if commit_image:
-        filename = secure_filename(commit_image.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        commit_image.save(filepath)
+        image_binary = commit_image.read()
     else:
         return '', 400
 
@@ -179,7 +163,7 @@ def make_project(user):
 
     new_commit = Commit(
         commit_message=commit_message,
-        commit_image=filepath,
+        commit_image=image_binary,
         project_id=new_project.id,
         user_id=user.id
     )
@@ -189,11 +173,10 @@ def make_project(user):
     return jsonify(project_id=new_project.id), 201
 
 
-
 @app.route('/project/<int:project_id>', methods=['GET', 'PATCH', 'DELETE'])
-def project_detail(project_id,user):
-    if user is None:
-        user = Guest()
+@token_required
+def project_detail(user):
+    project_id = request.view_args.get('project_id')
     project = Project.query.get_or_404(project_id)
     star_entry = db.session.execute(stars_table.select().where(stars_table.c.user_id == user.id,stars_table.c.project_id == project.id)).fetchone()
     
@@ -313,6 +296,7 @@ def commit(user, project_id):
 
 
 @app.route('/project/<int:project_id>/commits')
+@token_required
 def commits(project_id):
     project = Project.query.get_or_404(project_id)
     commits = Commit.query.filter_by(project_id=project.id).order_by(Commit.id.desc()).all()
@@ -326,6 +310,7 @@ def commits(project_id):
 
 
 @app.route('/project/<int:project_id>/commit/<int:commit_id>', methods=['GET', 'POST'])
+@token_required
 def commit_detail(user, project_id, commit_id):
     project = Project.query.get_or_404(project_id)
     commit = Commit.query.get_or_404(commit_id)

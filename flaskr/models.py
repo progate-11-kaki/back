@@ -20,7 +20,7 @@ class User(db.Model):
     username = db.Column(db.String(20), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     token = db.Column(db.String(256), nullable=True, unique=True)
-    profile_image = db.Column(db.String(120), nullable=True)
+    profile_image = db.Column(db.LargeBinary, nullable=True)
     stars = db.relationship('Project', secondary=stars_table, backref=db.backref('stargazers'))
 
     def get_profile_image(self):
@@ -38,12 +38,6 @@ class User(db.Model):
         self.token = token
         db.session.commit()
         return token
-
-class Guest:
-    def __init__(self):
-        self.id = None
-        self.username = None
-        self.profile_image = None
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -72,7 +66,7 @@ class Commit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date_posted = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     commit_message = db.Column(db.String(256), nullable=False)
-    commit_image = db.Column(db.String(256))
+    commit_image = db.Column(db.LargeBinary)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
