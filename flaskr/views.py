@@ -156,7 +156,7 @@ def make_project(user):
     project_description = data.get('project_description')
     tags = data.get('tags', '').split(',')
     commit_message = data.get('commit_message')
-    commit_image = request.get('commit_image')
+    commit_image = request.files.get('commit_image')
 
     if commit_image:
         image_binary = commit_image.read()
