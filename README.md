@@ -1,5 +1,4 @@
-uploads フォルダ必要
-uploadsの中に　default_profile.png　でデフォルトアイコン設定
+
 
 
 flask db init    
