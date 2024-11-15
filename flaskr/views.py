@@ -14,9 +14,10 @@ def token_required(f):
         if not token:
             class GuestUser:
                 id = None
-                username = "Guest"
+                username = None
                 profile_image = None
             guest_user = GuestUser()
+            
             return f(guest_user, *args, **kwargs)
 
         try:
@@ -28,14 +29,26 @@ def token_required(f):
             current_user = {
                 "username": current_user.username,
                 "user_id": current_user.id,
-                "user_profile_image": current_user.profile_image
+                "profile_image": current_user.profile_image
             }
         except jwt.InvalidTokenError:
             return jsonify({'message': '無効なトークンです'}), 401
 
         return f(current_user, *args, **kwargs)
     return decorated_function
+
 #＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿ここからエンドポイント＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
+
+@app.route('/userinfo', methods=['GET'])
+@token_required
+def userinfo(user):
+    current_user = {
+                "username": user.username,
+                "user_id": user.id,
+                "profile_image": user.profile_image
+            }
+    return jsonify(current_user), 200
+
 
 @app.route('/', methods=['GET'])
 @token_required
@@ -138,12 +151,12 @@ def profile(user):
 @app.route('/makeproject', methods=['POST'])
 @token_required
 def make_project(user):
-    data = request.json
+    data = request.form
     project_name = data.get('project_name')
     project_description = data.get('project_description')
     tags = data.get('tags', '').split(',')
     commit_message = data.get('commit_message')
-    commit_image = request.form.get('commit_image')
+    commit_image = request.get('commit_image')
 
     if commit_image:
         image_binary = commit_image.read()
@@ -259,7 +272,7 @@ def commit(user, project_id):
     project = Project.query.get_or_404(project_id)
 
     commit_message = request.json.get('commit_message')
-    commit_image = request.form.get('commit_image')
+    commit_image = request.files.get('commit_image')
     
     if commit_image:
         image_binary = commit_image.read()
