@@ -43,13 +43,11 @@ class Project(db.Model):
     name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text, nullable=False)
     tags = db.Column(db.PickleType, nullable=True)
-    user_name = db.Column(db.Integer, db.ForeignKey('user.username'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    user_profile_image = db.Column(db.Integer, db.ForeignKey('user.profile_image'), nullable=False)
     stars = db.Column(db.Integer)
     star_count = db.Column(db.Integer, default=0)
 
-    user = db.relationship('User', backref=db.backref('projects', lazy=True), foreign_keys=[user_id])
+    user = db.relationship('User', backref=db.backref('projects', lazy=True))
     members = db.relationship('User', secondary='project_members', backref=db.backref('projects_as_member', lazy=True))
     commits = db.relationship('Commit', back_populates='project', cascade="all, delete-orphan")
 
@@ -67,9 +65,7 @@ class Commit(db.Model):
     commit_message = db.Column(db.String(256), nullable=False)
     commit_image = db.Column(db.Text)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
-    user_name = db.Column(db.Integer, db.ForeignKey('user.username'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    user_profile_image = db.Column(db.Integer, db.ForeignKey('user.profile_image'), nullable=False)
 
     project = db.relationship('Project', back_populates='commits')
     user = db.relationship('User', backref=db.backref('commits', lazy=True))
@@ -82,18 +78,13 @@ class CommitComment(db.Model):
     created_at = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     content = db.Column(db.Text, nullable=False)
     commit_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
-    user_name = db.Column(db.Integer, db.ForeignKey('user.username'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     user = db.relationship('User', backref=db.backref('comments', lazy=True))
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    to_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    to_user_name = db.Column(db.Integer, db.ForeignKey('user.username'), nullable=False)
-    from_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    from_user_name = db.Column(db.Integer, db.ForeignKey('user.username'), nullable=False)
-    from_user_profile_image = db.Column(db.Integer, db.ForeignKey('user.profile_image'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     type = db.Column(db.String(20), nullable=False)
     created_at = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     status = db.Column(db.String(20), default='pending')
