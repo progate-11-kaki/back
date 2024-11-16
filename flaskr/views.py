@@ -48,8 +48,8 @@ def userinfo(user):
 
 @app.route('/', methods=['GET'])
 @token_required
-def home(ucurrent_ser):
-    notifications = Notification.query.filter_by(user_id=ucurrent_ser.id, status='pending').all()
+def home(current_ser):
+    notifications = Notification.query.filter_by(user_id=current_ser.id, status='pending').all()
     search_query = request.args.get('search', '')
     sort_order = request.args.get('sort', 'stars')
 
@@ -62,7 +62,7 @@ def home(ucurrent_ser):
         )
 
     if sort_order == 'stars':
-        project_query = project_query.join(stars_table).group_by(Project.id).order_by(db.func.count(stars_table.c.project_id).desc())
+        project_query = project_query.order_by(Project.star_count.desc())
     else:
         project_query = project_query.order_by(Project.date_posted.desc())
 
@@ -77,7 +77,7 @@ def home(ucurrent_ser):
         for notification in notifications
     ]
 
-    return jsonify({"projects": project_data, "notifications": notification_data, "user_id": ucurrent_ser.id}),200
+    return jsonify({"projects": project_data, "notifications": notification_data, "user_id": current_ser.id}),200
 
 
 @app.route('/login', methods=['POST'])
