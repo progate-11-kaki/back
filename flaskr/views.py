@@ -220,6 +220,7 @@ def project_detail(current_user, project_id):
         return '', 200
 
     latest_commit = Commit.query.filter_by(project_id=project.id).order_by(Commit.id.desc()).first()
+    project_members_info = [{"user_id": member.id, "username": member.username, "profile_image": member.profile_image} for member in project.members]
     return jsonify(
         project_id=project.id,
         name=project.name,
@@ -227,7 +228,7 @@ def project_detail(current_user, project_id):
         is_public=project.is_public,
         latest_commit_image=latest_commit.commit_image,
         created_user=project.user_id,
-        project_member=project.members,
+        project_member=project_members_info,
         project_star_count=project.star_count,
         star_entry=star_entry
     ), 200
@@ -237,7 +238,7 @@ def project_detail(current_user, project_id):
 @token_required
 def invite_user(current_user, project_id):
     project = Project.query.get_or_404(project_id)
-    
+    project_members_info = [{"user_id": member.id, "username": member.username, "profile_image": member.profile_image} for member in project.members]
     search_query = request.args.get('search', '')
     users = []
     
@@ -261,7 +262,7 @@ def invite_user(current_user, project_id):
 
         return '', 404
 
-    return jsonify(project_member=project.members, users=[{"id": user.id, "username": user.username, "user_image": user.profile_image} for user in users]), 200
+    return jsonify( project_member=project_members_info, users=[{"id": user.id, "username": user.username, "user_image": user.profile_image} for user in users]), 200
 
 
 @app.route('/project/<int:project_id>/commit', methods=['POST'])
@@ -311,6 +312,7 @@ def commits(current_user, project_id):
 
     return jsonify(commits=[{
         "id": commit.id,
+        "created_user": commit.user_id,
         "commit_message": commit.commit_message,
         "commit_image": commit.commit_image,
         "created_at": commit.date_posted
@@ -358,7 +360,8 @@ def commit_detail(current_user, project_id, commit_id):
         'created_at': comment.created_at,
         'user': {
             'id': comment.user.id,
-            'username': comment.user.username
+            'username': comment.user.username,
+            'profile_image': comment.user.profile_image
         }
     } for comment in comments]
 
@@ -366,6 +369,7 @@ def commit_detail(current_user, project_id, commit_id):
         project_id=project.id,
         project_name=project.name,
         commit_id=commit.id,
+        created_user=commit.user_id,
         commit_message=commit.commit_message,
         commit_image=commit.commit_image,
         created_at=commit.created_at,
