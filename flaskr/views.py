@@ -221,14 +221,18 @@ def project_detail(current_user, project_id):
 
     latest_commit = Commit.query.filter_by(project_id=project.id).order_by(Commit.id.desc()).first()
     project_members_info = [{"user_id": member.id, "username": member.username, "profile_image": member.profile_image} for member in project.members]
+    commit_count = len(project.commits)
     return jsonify(
         project_id=project.id,
         name=project.name,
         description=project.description,
         is_public=project.is_public,
+        date_posted=project.date_posted,
         latest_commit_image=latest_commit.commit_image,
+        latest_commit_message=latest_commit.commit_message,
         created_user=project.user_id,
         project_member=project_members_info,
+        commit_count=commit_count,
         project_star_count=project.star_count,
         star_entry=star_entry
     ), 200
