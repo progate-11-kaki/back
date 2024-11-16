@@ -81,7 +81,7 @@ def home(current_ser):
         "description": project.description,
         "created_user": project.user_id,
         "created_at": project.date_posted,
-        "latest_commit_image": latest_commit_dict.get(project.id, {}).get('commit_image', '')
+        "latest_commit_image": latest_commit_dict.get(project.id).commit_image if latest_commit_dict.get(project.id) else ''
     }
     for project in projects
 ]
