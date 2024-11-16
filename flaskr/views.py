@@ -48,8 +48,8 @@ def userinfo(user):
 
 @app.route('/', methods=['GET'])
 @token_required
-def home(current_ser):
-    notifications = Notification.query.filter_by(user_id=current_ser.id, status='pending').all()
+def home(current_user):
+    notifications = Notification.query.filter_by(to_user_id=current_user.id, status='pending').all()
     search_query = request.args.get('search', '')
     sort_order = request.args.get('sort', 'stars')
 
@@ -75,28 +75,45 @@ def home(current_ser):
         latest_commit_dict[commit.project_id] = commit
 
     project_data = [
-    {
-        "id": project.id,
-        "name": project.name,
-        "description": project.description,
-        "created_username": project.user.username,
-        "created_user_id": project.user_id,
-        "created_user_profile_image": project.user.profile_image,
-        "created_at": project.created_at,
-        "latest_commit_image": latest_commit_dict.get(project.id).commit_image if latest_commit_dict.get(project.id) else ''
-    }
-    for project in projects
-]
+        {
+            "id": project.id,
+            "name": project.name,
+            "description": project.description,
+            "created_username": project.user.username,
+            "created_user_id": project.user_id,
+            "created_user_profile_image": project.user.profile_image,
+            "created_at": project.created_at,
+            "latest_commit_image": latest_commit_dict.get(project.id).commit_image if latest_commit_dict.get(project.id) else ''
+        }
+        for project in projects
+    ]
     notification_data = [
-        {"id": notification.id, "type": notification.type, "created_at": notification.created_at}
+        {
+            "id": notification.id,
+            "type": notification.type,
+            "created_at": notification.created_at,
+            "from_user": {
+                "username": notification.user.username,
+                "profile_image": notification.user.profile_image
+            },
+            "project": {
+                "name": notification.project.name,
+                "project_id": notification.project.id
+            },
+            "commit": {
+                "commit_id": notification.commit.id if notification.commit else None,
+                "message": notification.commit.commit_message if notification.commit else None,
+                "image": notification.commit.commit_image if notification.commit else None
+            }
+        }
         for notification in notifications
     ]
 
-    return jsonify({"projects": project_data, "notifications": notification_data, "user_id": current_ser.id}),200
+    return jsonify({"projects": project_data, "notifications": notification_data, "user_id": current_user.id}),200
 
-
+# eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozfQ.RBQ53gcBV8uRbOaq60wnUdlNzxH1aYSeLPYOnf1uuo0
 @app.route('/login', methods=['POST'])
-def login():#ログイン
+def login():#ログイン　　eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxfQ.3aIKU5wYvPtoXdlDJdFmys8qBY1NfkB5LmG1KHsYjd8
     data = request.json
     user = User.query.filter_by(username=data.get("username")).first()
 
@@ -138,7 +155,7 @@ def register():  # 登録
 def profile(current_user, user_id):
     user = User.query.get(user_id)
     if request.method == 'POST':
-        profile_image = request.form.get('profile_image')
+        profile_image = request.files.get('profile_image')
 
         if profile_image:
             image_binary = profile_image.read()
@@ -254,7 +271,12 @@ def project_detail(current_user, project_id):
         project_member=project_members_info,
         commit_count=commit_count,
         project_star_count=project.star_count,
-        star_entry=star_entry
+        star_entry=star_entry,
+        latest_commit_user_id=latest_commit.user.id,
+        latest_commit_username=latest_commit.user.username,
+        latest_commit_user_profile_image=latest_commit.user.profile_image,
+        latest_commit_created_at=latest_commit.created_at,
+        latest_commit_id=latest_commit.id
     ), 200
 
 
