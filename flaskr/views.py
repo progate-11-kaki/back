@@ -79,7 +79,7 @@ def home(current_ser):
         "id": project.id,
         "name": project.name,
         "description": project.description,
-        "created_user": project.user_id,
+        "created_user": project.user_name,
         "created_at": project.created_at,
         "latest_commit_image": latest_commit_dict.get(project.id).commit_image if latest_commit_dict.get(project.id) else ''
     }
@@ -178,7 +178,7 @@ def make_project(current_user):
         name=project_name,
         description=project_description,
         tags=tags,
-        user_id=current_user.id
+        user_name=current_user.username
     )
     new_project.members.append(current_user)
     db.session.add(new_project)
@@ -188,7 +188,7 @@ def make_project(current_user):
         commit_message=commit_message,
         commit_image=image_base64,
         project_id=new_project.id,
-        user_id=current_user.id
+        user_name=current_user.username
     )
     db.session.add(new_commit)
     db.session.commit()
@@ -243,7 +243,7 @@ def project_detail(current_user, project_id):
         created_at=project.created_at,
         latest_commit_image=latest_commit.commit_image,
         latest_commit_message=latest_commit.commit_message,
-        created_user=project.user_id,
+        created_user=project.user_name,
         project_member=project_members_info,
         commit_count=commit_count,
         project_star_count=project.star_count,
@@ -265,7 +265,7 @@ def invite_user(current_user, project_id):
     if request.method == 'POST':
         user_id = request.json.get('user_id')
         user_to_invite = User.query.get(user_id)
-        
+
         if user_to_invite:
             notification = Notification(
                 project_name=project.name,
@@ -300,7 +300,7 @@ def commit(current_user, project_id):
         commit_message=commit_message,
         commit_image=image_base64,
         project_id=project.id,
-        user_id=current_user.id
+        user_name=current_user.username
     )
     db.session.add(new_commit)
     db.session.commit()
@@ -329,7 +329,7 @@ def commits(current_user, project_id):
 
     return jsonify(commits=[{
         "id": commit.id,
-        "created_user": commit.user_id,
+        "created_user": commit.user_name,
         "commit_message": commit.commit_message,
         "commit_image": commit.commit_image,
         "created_at": commit.created_at
@@ -386,7 +386,7 @@ def commit_detail(current_user, project_id, commit_id):
         project_id=project.id,
         project_name=project.name,
         commit_id=commit.id,
-        created_user=commit.user_id,
+        created_user=commit.user_name,
         commit_message=commit.commit_message,
         commit_image=commit.commit_image,
         created_at=commit.created_at,
