@@ -64,7 +64,7 @@ def home(current_ser):
     if sort_order == 'stars':
         project_query = project_query.order_by(Project.star_count.desc())
     else:
-        project_query = project_query.order_by(Project.date_posted.desc())
+        project_query = project_query.order_by(Project.created_at.desc())
 
     projects = project_query.all()
     latest_commits = Commit.query.filter(Commit.project_id.in_([project.id for project in projects])) \
@@ -80,7 +80,7 @@ def home(current_ser):
         "name": project.name,
         "description": project.description,
         "created_user": project.user_id,
-        "created_at": project.date_posted,
+        "created_at": project.created_at,
         "latest_commit_image": latest_commit_dict.get(project.id).commit_image if latest_commit_dict.get(project.id) else ''
     }
     for project in projects
@@ -240,7 +240,7 @@ def project_detail(current_user, project_id):
         name=project.name,
         description=project.description,
         is_public=project.is_public,
-        date_posted=project.date_posted,
+        created_at=project.created_at,
         latest_commit_image=latest_commit.commit_image,
         latest_commit_message=latest_commit.commit_message,
         created_user=project.user_id,
@@ -332,7 +332,7 @@ def commits(current_user, project_id):
         "created_user": commit.user_id,
         "commit_message": commit.commit_message,
         "commit_image": commit.commit_image,
-        "created_at": commit.date_posted
+        "created_at": commit.created_at
     } for commit in commits]), 200
 
 

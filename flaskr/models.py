@@ -38,7 +38,7 @@ class User(db.Model):
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    date_posted = db.Column(db.DateTime, default=get_japan_time, nullable=False)
+    created_at = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     is_public = db.Column(db.Boolean, default=False)
     name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text, nullable=False)
@@ -61,7 +61,7 @@ class ProjectMembers(db.Model):
 
 class Commit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    date_posted = db.Column(db.DateTime, default=get_japan_time, nullable=False)
+    created_at = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     commit_message = db.Column(db.String(256), nullable=False)
     commit_image = db.Column(db.Text)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
@@ -75,7 +75,7 @@ class Commit(db.Model):
 
 class CommitComment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    date_posted = db.Column(db.DateTime, default=get_japan_time, nullable=False)
+    created_at = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     content = db.Column(db.Text, nullable=False)
     commit_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
