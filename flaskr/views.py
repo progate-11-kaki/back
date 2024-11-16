@@ -117,7 +117,7 @@ def register():#登録
 
 @app.route('/profile/<int:user_id>', methods=['GET','POST'])
 @token_required
-def profile(user_id):
+def profile(current_user, user_id):
     user = User.query.get(user_id)
     if request.method == 'POST':
         profile_image = request.form.get('profile_image')
