@@ -26,12 +26,7 @@ def token_required(f):
             current_user = User.query.get(data['user_id'])
             if not current_user:
                 return jsonify({'message': 'ユーザーが見つかりません'}), 404
-            
-            current_user = {
-                "username": current_user.username,
-                "user_id": current_user.id,
-                "profile_image": current_user.profile_image
-            }
+
         except jwt.InvalidTokenError:
             return jsonify({'message': '無効なトークンです'}), 401
 
@@ -53,8 +48,8 @@ def userinfo(user):
 
 @app.route('/', methods=['GET'])
 @token_required
-def home(user):
-    notifications = Notification.query.filter_by(user_id=user.id, status='pending').all()
+def home(ucurrent_ser):
+    notifications = Notification.query.filter_by(user_id=ucurrent_ser.id, status='pending').all()
     search_query = request.args.get('search', '')
     sort_order = request.args.get('sort', 'stars')
 
@@ -82,7 +77,7 @@ def home(user):
         for notification in notifications
     ]
 
-    return jsonify({"projects": project_data, "notifications": notification_data, "user_id": user.id}),200
+    return jsonify({"projects": project_data, "notifications": notification_data, "user_id": ucurrent_ser.id}),200
 
 
 @app.route('/login', methods=['POST'])
