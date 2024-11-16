@@ -275,12 +275,10 @@ def invite_user(current_user, project_id):
 
         if user_to_invite:
             notification = Notification(
-                project_name=project.name,
                 project_id=project.id,
                 type="invite",
                 to_user_id=user_to_invite.id,
-                from_user_id=current_user.id,
-                from_user_profile_image=current_user.profile_image
+                from_user_id=current_user.id
             )
             db.session.add(notification)
             db.session.commit()
@@ -318,7 +316,6 @@ def commit(current_user, project_id):
     for member in users:
         if member.id != current_user.id:
             notification = Notification(
-                created_at=notification.created_at,
                 type="commit",
                 to_user_id=member.id,
                 from_user_id=current_user.id,
@@ -367,10 +364,7 @@ def commit_detail(current_user, project_id, commit_id):
             for member in users:
                 if member.id != current_user.id:
                     notification = Notification(
-                        created_at=notification.created_at,
                         type="comment",
-                        commit_message=commit.commit_message,
-                        project_name=project.name,
                         to_user_id=member.id,
                         from_user_id=current_user.id,
                         project_id=project.id,

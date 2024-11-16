@@ -84,16 +84,16 @@ class CommitComment(db.Model):
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    to_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    from_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     type = db.Column(db.String(20), nullable=False)
     created_at = db.Column(db.DateTime, default=get_japan_time, nullable=False)
     status = db.Column(db.String(20), default='pending')
-    project_name = db.Column(db.String(128))
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     commit_id = db.Column(db.Integer, db.ForeignKey('commit.id'), nullable=True)
-    commit_message = db.Column(db.String(256))
 
-    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+    to_user = db.relationship('User', foreign_keys=[to_user_id], backref=db.backref('received_notifications', lazy=True))
+    from_user = db.relationship('User', foreign_keys=[from_user_id], backref=db.backref('sent_notifications', lazy=True))
     project = db.relationship('Project', backref=db.backref('notifications', lazy=True))
     commit = db.relationship('Commit', backref=db.backref('notifications', lazy=True))
 
