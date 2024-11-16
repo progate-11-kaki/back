@@ -79,7 +79,8 @@ def home(current_ser):
         "id": project.id,
         "name": project.name,
         "description": project.description,
-        "created_user": project.user_name,
+        "created_username": project.user_name,
+        "created_user_id": project.user_id,
         "created_at": project.created_at,
         "latest_commit_image": latest_commit_dict.get(project.id).commit_image if latest_commit_dict.get(project.id) else ''
     }
@@ -178,7 +179,9 @@ def make_project(current_user):
         name=project_name,
         description=project_description,
         tags=tags,
-        user_name=current_user.username
+        user_name=current_user.username,
+        user_id=current_user.id,
+        user_profile_image=current_user.profile_image
     )
     new_project.members.append(current_user)
     db.session.add(new_project)
@@ -188,7 +191,9 @@ def make_project(current_user):
         commit_message=commit_message,
         commit_image=image_base64,
         project_id=new_project.id,
-        user_name=current_user.username
+        user_name=current_user.username,
+        user_id=current_user.id,
+        user_profile_image=current_user.profile_image
     )
     db.session.add(new_commit)
     db.session.commit()
@@ -243,7 +248,9 @@ def project_detail(current_user, project_id):
         created_at=project.created_at,
         latest_commit_image=latest_commit.commit_image,
         latest_commit_message=latest_commit.commit_message,
-        created_user=project.user_name,
+        created_username=project.user_name,
+        created_user_id=project.user_id,
+        created_user_profile_image=project.user_profile_image,
         project_member=project_members_info,
         commit_count=commit_count,
         project_star_count=project.star_count,
@@ -269,9 +276,13 @@ def invite_user(current_user, project_id):
         if user_to_invite:
             notification = Notification(
                 project_name=project.name,
-                user_id=user_to_invite.id,
                 project_id=project.id,
-                type="invite"
+                type="invite",
+                to_user_id=user_to_invite.id,
+                to_user_name=user_to_invite.username,
+                from_user_id=current_user.id,
+                from_user_name=current_user.username,
+                from_user_profile_image=current_user.profile_image
             )
             db.session.add(notification)
             db.session.commit()
@@ -300,7 +311,9 @@ def commit(current_user, project_id):
         commit_message=commit_message,
         commit_image=image_base64,
         project_id=project.id,
-        user_name=current_user.username
+        user_name=current_user.username,
+        user_id=current_user.id,
+        user_profile_image=current_user.profile_image
     )
     db.session.add(new_commit)
     db.session.commit()
@@ -311,7 +324,11 @@ def commit(current_user, project_id):
             notification = Notification(
                 created_at=notification.created_at,
                 type="commit",
-                user_id=member.id,
+                to_user_id=member.id,
+                to_user_name=member.username,
+                from_user_id=current_user.id,
+                from_user_name=current_user.username,
+                from_user_profile_image=current_user.profile_image,
                 project_id=project.id,
                 commit_id=commit.id
             )
@@ -329,7 +346,9 @@ def commits(current_user, project_id):
 
     return jsonify(commits=[{
         "id": commit.id,
-        "created_user": commit.user_name,
+        "created_username": commit.user_name,
+        "created_user_id": commit.user_id,
+        "created_user_profile_image": commit.user_profile_image,
         "commit_message": commit.commit_message,
         "commit_image": commit.commit_image,
         "created_at": commit.created_at
@@ -359,7 +378,11 @@ def commit_detail(current_user, project_id, commit_id):
                         type="comment",
                         commit_message=commit.commit_message,
                         project_name=project.name,
-                        user_id=member.id,
+                        to_user_id=member.id,
+                        to_user_name=member.username,
+                        from_user_id=current_user.id,
+                        from_user_name=current_user.username,
+                        from_user_profile_image=current_user.profile_image,
                         project_id=project.id,
                         commit_id=commit.id,
                     )
@@ -386,7 +409,9 @@ def commit_detail(current_user, project_id, commit_id):
         project_id=project.id,
         project_name=project.name,
         commit_id=commit.id,
-        created_user=commit.user_name,
+        created_username=commit.user_name,
+        created_user_id=commit.user_id,
+        created_user_profile_image=commit.user_profile_image,
         commit_message=commit.commit_message,
         commit_image=commit.commit_image,
         created_at=commit.created_at,
