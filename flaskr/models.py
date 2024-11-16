@@ -21,7 +21,9 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     token = db.Column(db.String(256), nullable=True, unique=True)
     profile_image = db.Column(db.Text, nullable=True, default=None)
+
     stars = db.relationship('Project', secondary=stars_table, backref=db.backref('stargazers'))
+    
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

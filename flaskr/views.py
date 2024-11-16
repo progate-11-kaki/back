@@ -93,8 +93,9 @@ def home(current_user):
             "type": notification.type,
             "created_at": notification.created_at,
             "from_user": {
-                "username": notification.user.username,
-                "profile_image": notification.user.profile_image
+                "username": notification.from_user.username,
+                "profile_image": notification.from_user.profile_image,
+                "user_id": notification.from_user.id
             },
             "project": {
                 "name": notification.project.name,
