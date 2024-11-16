@@ -287,7 +287,7 @@ def invite_user(current_user, project_id):
 def commit(current_user, project_id):
     project = Project.query.get_or_404(project_id)
 
-    commit_message = request.json.get('commit_message')
+    commit_message = request.form.get('commit_message')
     commit_image = request.files.get('commit_image')
     
     if commit_image:
