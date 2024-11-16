@@ -114,18 +114,21 @@ def logout():#ログアウト
 
 
 @app.route('/register', methods=['POST'])
-def register():#登録
+def register():  # 登録
     data = request.json
+
     if data.get("password") != data.get("password2"):
         return jsonify({"message": "パスワードと確認用パスワードが一致しません。"}), 400
-    
-    if User.query.filter_by(username=User.username).first():
+
+    username = data.get("username")
+    if User.query.filter_by(username=username).first():
         return jsonify({"message": "このユーザー名は既に使用されています。"}), 409
-    
-    user = User(username=data.get("username"))
+
+    user = User(username=username)
     user.set_password(data.get("password"))
     db.session.add(user)
     db.session.commit()
+
     token = user.generate_token()
     return jsonify({"token": token}), 201
 
