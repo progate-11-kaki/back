@@ -149,7 +149,7 @@ def profile(current_user, user_id):
         "projects": [{
             "id": project.id,
             "name": project.name,
-            "created_user":project.user_id,
+            "created_user":project.user_name,
             "latest_commit_image": project.commits[-1].commit_image
         } for project in projects],
         "profile_image": user.profile_image,
