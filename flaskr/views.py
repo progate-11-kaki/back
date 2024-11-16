@@ -147,7 +147,7 @@ def profile(current_user, user_id):
 
 @app.route('/makeproject', methods=['POST'])
 @token_required
-def make_project(user):
+def make_project(current_user):
     data = request.form
     project_name = data.get('project_name')
     project_description = data.get('project_description')
@@ -165,8 +165,9 @@ def make_project(user):
         name=project_name,
         description=project_description,
         tags=tags,
-        user_id=user.id
+        user_id=current_user.id
     )
+    new_project.members.append(current_user)
     db.session.add(new_project)
     db.session.commit()
 
@@ -174,7 +175,7 @@ def make_project(user):
         commit_message=commit_message,
         commit_image=image_base64,
         project_id=new_project.id,
-        user_id=user.id
+        user_id=current_user.id
     )
     db.session.add(new_commit)
     db.session.commit()
@@ -234,7 +235,7 @@ def project_detail(current_user, project_id):
 
 @app.route('/project/<int:project_id>/invite', methods=['GET', 'POST'])
 @token_required
-def invite_user(project_id):
+def invite_user(current_user, project_id):
     project = Project.query.get_or_404(project_id)
     
     search_query = request.args.get('search', '')
@@ -304,7 +305,7 @@ def commit(current_user, project_id):
 
 @app.route('/project/<int:project_id>/commits')
 @token_required
-def commits(project_id):
+def commits(current_user, project_id):
     project = Project.query.get_or_404(project_id)
     commits = Commit.query.filter_by(project_id=project.id).order_by(Commit.id.desc()).all()
 
