@@ -49,7 +49,7 @@ class Project(db.Model):
     stars = db.Column(db.Integer)
     star_count = db.Column(db.Integer, default=0)
 
-    user = db.relationship('User', backref=db.backref('projects', lazy=True))
+    user = db.relationship('User', backref=db.backref('projects', lazy=True), foreign_keys=[user_id])
     members = db.relationship('User', secondary='project_members', backref=db.backref('projects_as_member', lazy=True))
     commits = db.relationship('Commit', back_populates='project', cascade="all, delete-orphan")
 
