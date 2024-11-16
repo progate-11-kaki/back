@@ -50,6 +50,7 @@ def userinfo(user):
             }
     return jsonify(current_user), 200
 
+
 @app.route('/', methods=['GET'])
 @token_required
 def home(user):
