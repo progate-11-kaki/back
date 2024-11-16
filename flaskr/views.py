@@ -67,11 +67,24 @@ def home(current_ser):
         project_query = project_query.order_by(Project.date_posted.desc())
 
     projects = project_query.all()
+    latest_commits = Commit.query.filter(Commit.project_id.in_([project.id for project in projects])) \
+    .order_by(Commit.project_id, Commit.id.desc()).all()
+
+    latest_commit_dict = {}
+    for commit in latest_commits:
+        latest_commit_dict[commit.project_id] = commit
 
     project_data = [
-        {"id": project.id, "name": project.name, "description": project.description, "created_user": project.user_id, "created_at": project.date_posted}
-        for project in projects
-    ]
+    {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "created_user": project.user_id,
+        "created_at": project.date_posted,
+        "latest_commit_image": latest_commit_dict.get(project.id, {}).get('commit_image', '')
+    }
+    for project in projects
+]
     notification_data = [
         {"id": notification.id, "type": notification.type, "created_at": notification.created_at}
         for notification in notifications
