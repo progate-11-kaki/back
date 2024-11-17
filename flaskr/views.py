@@ -70,12 +70,9 @@ def home(current_user):
     latest_commits = Commit.query.filter(Commit.project_id.in_([project.id for project in projects])) \
     .order_by(Commit.project_id, Commit.id.desc()).all()
 
-    latest_commits = db.session.query(Commit).join(
-    db.session.query(Commit.project_id, db.func.max(Commit.id).label('max_commit_id'))
-    .group_by(Commit.project_id)
-    .subquery()
-    ).filter(Commit.id == db.func.max(Commit.id)).all()
-    latest_commit_dict = {commit.project_id: commit for commit in latest_commits}
+    latest_commit_dict = {}
+    for commit in latest_commits:
+        latest_commit_dict[commit.project_id] = commit
 
     project_data = [
         {
@@ -86,7 +83,7 @@ def home(current_user):
             "created_user_id": project.user_id,
             "created_user_profile_image": project.user.profile_image,
             "created_at": project.created_at,
-            "latest_commit_image": latest_commit_dict.get(project.id).commit_image if latest_commit_dict.get(project.id) else ''
+            "latest_commit_image": commit.commit_image
         }
         for project in projects
     ]
