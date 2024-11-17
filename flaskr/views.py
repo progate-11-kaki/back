@@ -83,7 +83,7 @@ def home(current_user):
             "created_user_id": project.user_id,
             "created_user_profile_image": project.user.profile_image,
             "created_at": project.created_at,
-            "latest_commit_image": commit.commit_image
+            "latest_commit_image": latest_commit_dict.get(project.id).commit_image if latest_commit_dict.get(project.id) else ''
         }
         for project in projects
     ]
